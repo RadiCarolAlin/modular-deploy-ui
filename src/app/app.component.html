@@ -1,0 +1,85 @@
+<div style="max-width:720px;margin:32px auto;font-family:system-ui;">
+    <h2>Modular Deploy</h2>
+
+    <label>Branch:
+        <input [(ngModel)]="branch" placeholder="main" />
+    </label>
+
+    <div style="margin:12px 0;">
+        <label>
+            <input
+                    type="checkbox"
+                    [ngModel]="fe()"
+                    (ngModelChange)="onToggleFe($event)"
+            />
+            Frontend
+        </label>
+
+        <label style="margin-left:16px;">
+            <input
+                    type="checkbox"
+                    [ngModel]="be()"
+                    (ngModelChange)="onToggleBe($event)"
+            />
+            Backend
+        </label>
+
+        <label style="margin-left:16px;">
+            <input
+                    type="checkbox"
+                    [ngModel]="gitea()"
+                    (ngModelChange)="onToggleGitea($event)"
+            />
+            Gitea
+        </label>
+
+        <label style="margin-left:16px;">
+            <input
+                    type="checkbox"
+                    [ngModel]="confluence()"
+                    (ngModelChange)="onToggleConfluence($event)"
+            />
+            Confluence
+        </label>
+
+        <label style="margin-left:16px;">
+            <input
+                    type="checkbox"
+                    [ngModel]="jira()"
+                    (ngModelChange)="onToggleJira($event)"
+            />
+            Jira
+        </label>
+    </div>
+
+    <button (click)="runSelected()" [disabled]="running()">Run selected</button>
+
+    <div *ngIf="running()" style="height:10px;background:#eee;border-radius:6px;margin-top:12px;">
+        <div
+                [style.width.%]="progress()"
+                style="height:100%;background:#5a67d8;border-radius:6px;transition:width .2s;"
+        ></div>
+    </div>
+
+    <ul *ngIf="steps().length" style="margin-top:8px;padding-left:18px;">
+        <li *ngFor="let st of steps()">
+            <strong>{{ st.id || '(step)' }}</strong> — {{ st.status }}
+        </li>
+    </ul>
+
+    <h4 style="margin-top:16px">Live logs</h4>
+    <div style="height:260px; overflow:auto; border:1px solid #ddd; padding:8px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; background:#fafafa;">
+        <div *ngFor="let e of deploy.logs()">
+            <span style="opacity:.6">{{ e.ts | date:'mediumTime' }}</span>
+            <span> — </span>
+            <span>{{ e.line }}</span>
+        </div>
+    </div>
+
+
+    <p style="margin-top:12px;">{{ status() }}</p>
+
+    <p *ngIf="logsUrl()">
+        <a [href]="logsUrl()!" target="_blank" rel="noreferrer">Deschide logurile Cloud Build</a>
+    </p>
+</div>
