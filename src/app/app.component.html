@@ -50,6 +50,24 @@
             />
             Jira
         </label>
+
+        <label style="margin-left:16px;">
+            <input
+                    type="checkbox"
+                    [ngModel]="artifactory()"
+                    (ngModelChange)="onToggleArtifactory($event)"
+            />
+            Artifactory
+        </label>
+
+        <label style="margin-left:16px;">
+            <input
+                    type="checkbox"
+                    [ngModel]="github()"
+                    (ngModelChange)="onToggleGithub($event)"
+            />
+            GitHub
+        </label>
     </div>
 
     <button (click)="runSelected()" [disabled]="running()">Run selected</button>

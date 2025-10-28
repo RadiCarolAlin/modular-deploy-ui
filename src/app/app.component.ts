@@ -21,6 +21,8 @@ export class AppComponent {
   private _gitea = signal(true);
   private _conf = signal(true);
   private _jira = signal(false);
+  private _artifactory = signal(false);
+  private _github = signal(false);
 
   // expuneri readonly pt. template (apelabile cu fe(), be() etc.)
   fe = this._fe.asReadonly();
@@ -28,6 +30,8 @@ export class AppComponent {
   gitea = this._gitea.asReadonly();
   confluence = this._conf.asReadonly();
   jira = this._jira.asReadonly();
+  artifactory = this._artifactory.asReadonly();
+  github = this._github.asReadonly();
 
   // din service (deja sunt signals)
   running  = this.deploy.running.asReadonly();
@@ -44,14 +48,18 @@ export class AppComponent {
   onToggleGitea(v: boolean)      { this._gitea.set(v); }
   onToggleConfluence(v: boolean) { this._conf.set(v); }
   onToggleJira(v: boolean)       { this._jira.set(v); }
+  onToggleArtifactory(v: boolean) { this._artifactory.set(v); }
+  onToggleGithub(v: boolean)     { this._github.set(v); }
 
   runSelected() {
     const selected: string[] = [];
-    if (this._fe())    selected.push('frontend');
-    if (this._be())    selected.push('backend');
-    if (this._gitea()) selected.push('gitea');
-    if (this._conf())  selected.push('confluence');
-    if (this._jira())  selected.push('jira');
+    if (this._fe())         selected.push('frontend');
+    if (this._be())         selected.push('backend');
+    if (this._gitea())      selected.push('gitea');
+    if (this._conf())       selected.push('confluence');
+    if (this._jira())       selected.push('jira');
+    if (this._artifactory()) selected.push('artifactory');
+    if (this._github())     selected.push('github');
 
     this.deploy.run(selected.join(','), this.branch || 'main');
   }

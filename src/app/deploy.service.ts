@@ -132,7 +132,7 @@ export class DeployService {
 
   // === Helpers ===
   private isCanonical(id: string): boolean {
-    const CANON = ['frontend', 'backend', 'gitea', 'confluence', 'jira'];
+    const CANON = ['frontend', 'backend', 'gitea', 'confluence', 'jira', 'artifactory', 'github'];
     return CANON.includes(id);
   }
 
