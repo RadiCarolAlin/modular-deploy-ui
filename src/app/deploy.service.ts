@@ -64,8 +64,7 @@ export class DeployService {
         this.opName = res.operation;
         this.status.set(`Platform deployment started. Operation: ${res.operation}`);
         this.startPolling();
-        // Reload platform state after starting
-        setTimeout(() => this.loadPlatform(), 1000);
+        // Platform state will be reloaded only when deployment finishes
       },
       error: (err) => {
         this.running.set(false);
@@ -140,11 +139,17 @@ export class DeployService {
   deletePlatform(branch: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
 
-    // We don't know which apps are deployed yet, so show generic steps
-    const seeded: Step[] = [
-      { id: 'frontend', status: 'RUNNING' },
-      { id: 'backend', status: 'RUNNING' }
-    ];
+    // Get current platform apps from Firestore
+    const currentPlatform = this.platform();
+    if (!currentPlatform || currentPlatform.deployed_apps.length === 0) {
+      this.status.set('No platform to delete');
+      return;
+    }
+
+    // Set selected to ALL deployed apps from platform
+    this.selected = currentPlatform.deployed_apps.map(a => a.toLowerCase());
+
+    const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
 
     this.steps.set(seeded);
     this.progress.set(this.computePercent(seeded, false));
