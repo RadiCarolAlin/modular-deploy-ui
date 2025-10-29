@@ -17,6 +17,7 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   set currentTab(value: string) {
     // Reset all checkboxes when changing tabs
     if (this._currentTab() !== value) {
+      console.log(`🔄 Switching from ${this._currentTab()} to ${value}`);
       this.resetAllCheckboxes();
       this._currentTab.set(value);
     }
@@ -123,13 +124,15 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
     console.log('🎯 Component initialized, loading platform...');
   }
 
-  // Debug: Log platform state changes
+  // Debug: Log platform state changes (reduced frequency)
   ngDoCheck() {
     const platform = this.platform();
     if (platform && this._lastPlatformCheck !== JSON.stringify(platform.deployed_apps)) {
       this._lastPlatformCheck = JSON.stringify(platform.deployed_apps);
-      console.log('📊 Platform deployed apps:', platform.deployed_apps);
-      console.log('📊 isAppDeployed:', this.isAppDeployed());
+      // Only log if there's an actual change in deployed apps
+      console.log('📊 Platform state changed');
+      console.log('   └─ Deployed apps:', platform.deployed_apps);
+      console.log('   └─ Status:', platform.status);
     }
   }
 

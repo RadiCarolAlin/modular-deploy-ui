@@ -27,16 +27,39 @@ export class DeployService {
   private pollTimer: any = null;
   private selected: string[] = [];
 
+  // Anti-flickering: prevent multiple simultaneous platform loads
+  private isLoadingPlatform = false;
+  private lastPlatformLoad = 0;
+  private platformLoadDebounce = 1000; // 1 second debounce
+
   constructor(private http: HttpClient) {}
 
-  // === LOAD PLATFORM STATE ===
+  // === LOAD PLATFORM STATE (with debouncing) ===
   loadPlatform() {
+    // Debounce: don't reload if recently loaded
+    const now = Date.now();
+    if (now - this.lastPlatformLoad < this.platformLoadDebounce) {
+      console.log('⏱️ Platform load debounced (too soon)');
+      return;
+    }
+
+    // Prevent multiple simultaneous loads
+    if (this.isLoadingPlatform) {
+      console.log('⏱️ Platform load already in progress');
+      return;
+    }
+
+    this.isLoadingPlatform = true;
+    this.lastPlatformLoad = now;
+
     this.http.get<Platform>(`${environment.orchestratorUrl}/platform`).subscribe({
       next: (res) => {
         this.platform.set(res);
+        this.isLoadingPlatform = false;
         console.log('✅ Platform loaded:', res);
       },
       error: (err) => {
+        this.isLoadingPlatform = false;
         console.error('❌ Failed to load platform:', err);
         this.status.set(`Error loading platform: ${err?.error ?? err?.message}`);
       }
@@ -102,7 +125,7 @@ export class DeployService {
         console.log('✅ Add started. Operation ID:', res.operation);
         this.status.set(`Adding apps: ${res.added.join(', ')}. Operation: ${res.operation}`);
         this.startPolling();
-        setTimeout(() => this.loadPlatform(), 1000);
+        // Platform will be reloaded when operation completes (in polling done handler)
       },
       error: (err) => {
         console.error('❌ Add failed:', err);
@@ -137,7 +160,7 @@ export class DeployService {
         console.log('✅ Remove started. Operation ID:', res.operation);
         this.status.set(`Removing apps: ${res.removed.join(', ')}. Operation: ${res.operation}`);
         this.startPolling();
-        setTimeout(() => this.loadPlatform(), 1000);
+        // Platform will be reloaded when operation completes (in polling done handler)
       },
       error: (err) => {
         console.error('❌ Remove failed:', err);
@@ -178,7 +201,7 @@ export class DeployService {
         console.log('✅ Delete started. Operation ID:', res.operation);
         this.status.set(`Platform deletion started. Operation: ${res.operation}`);
         this.startPolling();
-        setTimeout(() => this.loadPlatform(), 1000);
+        // Platform will be reloaded when operation completes (in polling done handler)
       },
       error: (err) => {
         console.error('❌ Delete failed:', err);
