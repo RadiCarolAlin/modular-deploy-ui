@@ -152,10 +152,26 @@
     font-size: 14px;
     color: rgba(255,255,255,0.7);
     margin-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
 }
 
 .status-apps strong {
     color: #ffffff;
+    margin-right: 6px;
+}
+
+.deployed-app {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 2px;
+}
+
+.app-icon-small {
+    font-size: 14px;
 }
 
 /* === FORM ELEMENTS === */
@@ -235,10 +251,21 @@
     height: 20px;
     accent-color: #667eea;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .app-checkbox:disabled {
     cursor: not-allowed;
+}
+
+.app-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
 }
 
 .app-name {
@@ -249,14 +276,16 @@
 }
 
 .app-badge {
-    font-size: 11px;
-    padding: 4px 8px;
+    font-size: 9px;
+    padding: 3px 6px;
     background: rgba(239, 68, 68, 0.2);
     color: #fca5a5;
-    border-radius: 6px;
+    border-radius: 4px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 /* === BUTTONS === */
@@ -310,19 +339,69 @@
 }
 
 .progress-bar {
-    height: 8px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 999px;
+    height: 48px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
     overflow: hidden;
     position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
 }
 
 .progress-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
     height: 100%;
     background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-    border-radius: 999px;
-    transition: width 0.3s ease;
-    box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+    border-radius: 16px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+}
+
+.progress-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.progress-icons {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.progress-app-icon {
+    font-size: 24px;
+    animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+}
+
+.progress-percentage {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    letter-spacing: 0.5px;
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 /* === STEPS LIST === */
@@ -343,10 +422,21 @@
     animation: slideInRight 0.3s ease-out;
 }
 
+.step-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+
 .step-name {
     font-weight: 600;
     color: #ffffff;
     text-transform: capitalize;
+    flex: 1;
 }
 
 .step-status {

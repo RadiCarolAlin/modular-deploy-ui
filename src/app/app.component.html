@@ -41,18 +41,24 @@
             <div class="platform-status">
                 <div class="status-icon">
                     <span *ngIf="platform()!.status === 'active'">✅</span>
-                    <span *ngIf="platform()!.status === 'deploying'">⚙️</span>
+                    <span *ngIf="platform()!.status === 'deploying' || platform()!.status === 'updating'">⚙️</span>
                     <span *ngIf="platform()!.status === 'not_deployed'">⭕</span>
+                    <span *ngIf="platform()!.status === 'deleting'">🗑️</span>
                 </div>
                 <div class="status-content">
                     <div class="status-label">Platform Status</div>
                     <div class="status-value" [class.active]="platform()!.status === 'active'"
-                         [class.deploying]="platform()!.status === 'deploying'"
+                         [class.deploying]="platform()!.status === 'deploying' || platform()!.status === 'updating'"
                          [class.not-deployed]="platform()!.status === 'not_deployed'">
                         {{ platform()!.status | titlecase }}
                     </div>
                     <div class="status-apps" *ngIf="platform()!.deployed_apps.length > 0">
-                        <strong>Deployed:</strong> {{ platform()!.deployed_apps.join(', ') }}
+                        <strong>Deployed:</strong>
+                        <span class="deployed-app" *ngFor="let app of platform()!.deployed_apps; let last = last">
+              <span class="app-icon-small">{{ getAppIcon(app) }}</span>
+              <span>{{ app }}</span>
+              <span *ngIf="!last">,</span>
+            </span>
                     </div>
                     <div class="status-apps" *ngIf="platform()!.deployed_apps.length === 0">
                         <strong>No applications deployed</strong>
@@ -78,6 +84,7 @@
                 <!-- Frontend (Required) -->
                 <div class="app-card disabled">
                     <input type="checkbox" class="app-checkbox" [checked]="true" disabled />
+                    <span class="app-icon">⚛️</span>
                     <span class="app-name">Frontend</span>
                     <span class="app-badge">Required</span>
                 </div>
@@ -85,6 +92,7 @@
                 <!-- Backend (Required) -->
                 <div class="app-card disabled">
                     <input type="checkbox" class="app-checkbox" [checked]="true" disabled />
+                    <span class="app-icon">🔧</span>
                     <span class="app-name">Backend</span>
                     <span class="app-badge">Required</span>
                 </div>
@@ -97,6 +105,7 @@
                             [ngModel]="deployGitea()"
                             (ngModelChange)="onToggleDeployGitea($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">🦊</span>
                     <span class="app-name">Gitea</span>
                 </div>
 
@@ -108,6 +117,7 @@
                             [ngModel]="deployConfluence()"
                             (ngModelChange)="onToggleDeployConfluence($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">📚</span>
                     <span class="app-name">Confluence</span>
                 </div>
 
@@ -119,6 +129,7 @@
                             [ngModel]="deployJira()"
                             (ngModelChange)="onToggleDeployJira($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">📋</span>
                     <span class="app-name">Jira</span>
                 </div>
 
@@ -130,6 +141,7 @@
                             [ngModel]="deployArtifactory()"
                             (ngModelChange)="onToggleDeployArtifactory($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">📦</span>
                     <span class="app-name">Artifactory</span>
                 </div>
 
@@ -141,6 +153,7 @@
                             [ngModel]="deployGithub()"
                             (ngModelChange)="onToggleDeployGithub($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">🐙</span>
                     <span class="app-name">GitHub</span>
                 </div>
             </div>
@@ -172,6 +185,7 @@
                             [ngModel]="addGitea()"
                             (ngModelChange)="onToggleAddGitea($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">🦊</span>
                     <span class="app-name">Gitea</span>
                 </div>
 
@@ -182,6 +196,7 @@
                             [ngModel]="addConfluence()"
                             (ngModelChange)="onToggleAddConfluence($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">📚</span>
                     <span class="app-name">Confluence</span>
                 </div>
 
@@ -192,6 +207,7 @@
                             [ngModel]="addJira()"
                             (ngModelChange)="onToggleAddJira($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">📋</span>
                     <span class="app-name">Jira</span>
                 </div>
 
@@ -202,6 +218,7 @@
                             [ngModel]="addArtifactory()"
                             (ngModelChange)="onToggleAddArtifactory($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">📦</span>
                     <span class="app-name">Artifactory</span>
                 </div>
 
@@ -212,6 +229,7 @@
                             [ngModel]="addGithub()"
                             (ngModelChange)="onToggleAddGithub($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">🐙</span>
                     <span class="app-name">GitHub</span>
                 </div>
             </div>
@@ -243,6 +261,7 @@
                             [ngModel]="removeGitea()"
                             (ngModelChange)="onToggleRemoveGitea($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">🦊</span>
                     <span class="app-name">Gitea</span>
                 </div>
 
@@ -253,6 +272,7 @@
                             [ngModel]="removeConfluence()"
                             (ngModelChange)="onToggleRemoveConfluence($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">📚</span>
                     <span class="app-name">Confluence</span>
                 </div>
 
@@ -263,6 +283,7 @@
                             [ngModel]="removeJira()"
                             (ngModelChange)="onToggleRemoveJira($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">📋</span>
                     <span class="app-name">Jira</span>
                 </div>
 
@@ -273,6 +294,7 @@
                             [ngModel]="removeArtifactory()"
                             (ngModelChange)="onToggleRemoveArtifactory($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">📦</span>
                     <span class="app-name">Artifactory</span>
                 </div>
 
@@ -283,6 +305,7 @@
                             [ngModel]="removeGithub()"
                             (ngModelChange)="onToggleRemoveGithub($event)"
                             (click)="$event.stopPropagation()" />
+                    <span class="app-icon">🐙</span>
                     <span class="app-name">GitHub</span>
                 </div>
             </div>
@@ -339,12 +362,29 @@
             <div class="progress-container" *ngIf="running()">
                 <div class="progress-bar">
                     <div class="progress-fill" [style.width.%]="progress()"></div>
+                    <div class="progress-content">
+                        <div class="progress-icons">
+              <span class="progress-app-icon" *ngFor="let st of getCompletedSteps()">
+                {{ getAppIcon(st.id) }}
+              </span>
+                        </div>
+                        <div class="progress-percentage">{{ progress() }}%</div>
+                    </div>
                 </div>
             </div>
 
             <!-- Steps List -->
             <ul class="steps-list" *ngIf="steps().length > 0">
                 <li class="step-item" *ngFor="let st of steps()">
+          <span class="step-icon">
+            <span *ngIf="st.id === 'frontend'">⚛️</span>
+            <span *ngIf="st.id === 'backend'">🔧</span>
+            <span *ngIf="st.id === 'gitea'">🦊</span>
+            <span *ngIf="st.id === 'confluence'">📚</span>
+            <span *ngIf="st.id === 'jira'">📋</span>
+            <span *ngIf="st.id === 'artifactory'">📦</span>
+            <span *ngIf="st.id === 'github'">🐙</span>
+          </span>
                     <span class="step-name">{{ st.id }}</span>
                     <span class="step-status"
                           [class.running]="st.status === 'RUNNING'"

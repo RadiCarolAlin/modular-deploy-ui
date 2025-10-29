@@ -148,4 +148,25 @@ export class AppComponent implements OnInit {
     this.deploy.deletePlatform(this.branch || 'main');
     this.deleteConfirmed = false; // Reset confirmation
   }
+
+  // Get icon for each app
+  getAppIcon(app: string): string {
+    const icons: { [key: string]: string } = {
+      'frontend': '⚛️',
+      'backend': '🔧',
+      'gitea': '🦊',
+      'confluence': '📚',
+      'jira': '📋',
+      'artifactory': '📦',
+      'github': '🐙'
+    };
+    return icons[app.toLowerCase()] || '🔹';
+  }
+
+  // Get completed steps for progress bar
+  getCompletedSteps() {
+    return this.steps().filter(st =>
+        st.status === 'SUCCESS' || st.status === 'DONE'
+    );
+  }
 }
