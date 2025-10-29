@@ -178,59 +178,84 @@
             </div>
 
             <div class="apps-grid">
-                <div class="app-card" (click)="onToggleAddGitea(!addGitea())">
+                <!-- Gitea -->
+                <div class="app-card"
+                     [class.disabled]="isAppDeployed().gitea"
+                     (click)="!isAppDeployed().gitea && onToggleAddGitea(!addGitea())">
                     <input
                             type="checkbox"
                             class="app-checkbox"
                             [ngModel]="addGitea()"
+                            [disabled]="isAppDeployed().gitea"
                             (ngModelChange)="onToggleAddGitea($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">🦊</span>
                     <span class="app-name">Gitea</span>
+                    <span class="app-badge" *ngIf="isAppDeployed().gitea">Deployed</span>
                 </div>
 
-                <div class="app-card" (click)="onToggleAddConfluence(!addConfluence())">
+                <!-- Confluence -->
+                <div class="app-card"
+                     [class.disabled]="isAppDeployed().confluence"
+                     (click)="!isAppDeployed().confluence && onToggleAddConfluence(!addConfluence())">
                     <input
                             type="checkbox"
                             class="app-checkbox"
                             [ngModel]="addConfluence()"
+                            [disabled]="isAppDeployed().confluence"
                             (ngModelChange)="onToggleAddConfluence($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">📚</span>
                     <span class="app-name">Confluence</span>
+                    <span class="app-badge" *ngIf="isAppDeployed().confluence">Deployed</span>
                 </div>
 
-                <div class="app-card" (click)="onToggleAddJira(!addJira())">
+                <!-- Jira -->
+                <div class="app-card"
+                     [class.disabled]="isAppDeployed().jira"
+                     (click)="!isAppDeployed().jira && onToggleAddJira(!addJira())">
                     <input
                             type="checkbox"
                             class="app-checkbox"
                             [ngModel]="addJira()"
+                            [disabled]="isAppDeployed().jira"
                             (ngModelChange)="onToggleAddJira($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">📋</span>
                     <span class="app-name">Jira</span>
+                    <span class="app-badge" *ngIf="isAppDeployed().jira">Deployed</span>
                 </div>
 
-                <div class="app-card" (click)="onToggleAddArtifactory(!addArtifactory())">
+                <!-- Artifactory -->
+                <div class="app-card"
+                     [class.disabled]="isAppDeployed().artifactory"
+                     (click)="!isAppDeployed().artifactory && onToggleAddArtifactory(!addArtifactory())">
                     <input
                             type="checkbox"
                             class="app-checkbox"
                             [ngModel]="addArtifactory()"
+                            [disabled]="isAppDeployed().artifactory"
                             (ngModelChange)="onToggleAddArtifactory($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">📦</span>
                     <span class="app-name">Artifactory</span>
+                    <span class="app-badge" *ngIf="isAppDeployed().artifactory">Deployed</span>
                 </div>
 
-                <div class="app-card" (click)="onToggleAddGithub(!addGithub())">
+                <!-- GitHub -->
+                <div class="app-card"
+                     [class.disabled]="isAppDeployed().github"
+                     (click)="!isAppDeployed().github && onToggleAddGithub(!addGithub())">
                     <input
                             type="checkbox"
                             class="app-checkbox"
                             [ngModel]="addGithub()"
+                            [disabled]="isAppDeployed().github"
                             (ngModelChange)="onToggleAddGithub($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">🐙</span>
                     <span class="app-name">GitHub</span>
+                    <span class="app-badge" *ngIf="isAppDeployed().github">Deployed</span>
                 </div>
             </div>
 
@@ -254,59 +279,84 @@
             </div>
 
             <div class="apps-grid">
-                <div class="app-card" (click)="onToggleRemoveGitea(!removeGitea())">
+                <!-- Gitea -->
+                <div class="app-card"
+                     [class.disabled]="!isAppDeployed().gitea"
+                     (click)="isAppDeployed().gitea && onToggleRemoveGitea(!removeGitea())">
                     <input
                             type="checkbox"
                             class="app-checkbox"
                             [ngModel]="removeGitea()"
+                            [disabled]="!isAppDeployed().gitea"
                             (ngModelChange)="onToggleRemoveGitea($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">🦊</span>
                     <span class="app-name">Gitea</span>
+                    <span class="app-badge" *ngIf="!isAppDeployed().gitea">Not Deployed</span>
                 </div>
 
-                <div class="app-card" (click)="onToggleRemoveConfluence(!removeConfluence())">
+                <!-- Confluence -->
+                <div class="app-card"
+                     [class.disabled]="!isAppDeployed().confluence"
+                     (click)="isAppDeployed().confluence && onToggleRemoveConfluence(!removeConfluence())">
                     <input
                             type="checkbox"
                             class="app-checkbox"
                             [ngModel]="removeConfluence()"
+                            [disabled]="!isAppDeployed().confluence"
                             (ngModelChange)="onToggleRemoveConfluence($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">📚</span>
                     <span class="app-name">Confluence</span>
+                    <span class="app-badge" *ngIf="!isAppDeployed().confluence">Not Deployed</span>
                 </div>
 
-                <div class="app-card" (click)="onToggleRemoveJira(!removeJira())">
+                <!-- Jira -->
+                <div class="app-card"
+                     [class.disabled]="!isAppDeployed().jira"
+                     (click)="isAppDeployed().jira && onToggleRemoveJira(!removeJira())">
                     <input
                             type="checkbox"
                             class="app-checkbox"
                             [ngModel]="removeJira()"
+                            [disabled]="!isAppDeployed().jira"
                             (ngModelChange)="onToggleRemoveJira($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">📋</span>
                     <span class="app-name">Jira</span>
+                    <span class="app-badge" *ngIf="!isAppDeployed().jira">Not Deployed</span>
                 </div>
 
-                <div class="app-card" (click)="onToggleRemoveArtifactory(!removeArtifactory())">
+                <!-- Artifactory -->
+                <div class="app-card"
+                     [class.disabled]="!isAppDeployed().artifactory"
+                     (click)="isAppDeployed().artifactory && onToggleRemoveArtifactory(!removeArtifactory())">
                     <input
                             type="checkbox"
                             class="app-checkbox"
                             [ngModel]="removeArtifactory()"
+                            [disabled]="!isAppDeployed().artifactory"
                             (ngModelChange)="onToggleRemoveArtifactory($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">📦</span>
                     <span class="app-name">Artifactory</span>
+                    <span class="app-badge" *ngIf="!isAppDeployed().artifactory">Not Deployed</span>
                 </div>
 
-                <div class="app-card" (click)="onToggleRemoveGithub(!removeGithub())">
+                <!-- GitHub -->
+                <div class="app-card"
+                     [class.disabled]="!isAppDeployed().github"
+                     (click)="isAppDeployed().github && onToggleRemoveGithub(!removeGithub())">
                     <input
                             type="checkbox"
                             class="app-checkbox"
                             [ngModel]="removeGithub()"
+                            [disabled]="!isAppDeployed().github"
                             (ngModelChange)="onToggleRemoveGithub($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">🐙</span>
                     <span class="app-name">GitHub</span>
+                    <span class="app-badge" *ngIf="!isAppDeployed().github">Not Deployed</span>
                 </div>
             </div>
 
@@ -356,26 +406,29 @@
         </div>
 
         <!-- ========== PROGRESS & LOGS (Shared across all tabs) ========== -->
-        <div class="tab-content" *ngIf="running() || steps().length > 0">
+        <div class="tab-content" *ngIf="running() || stableSteps().length > 0">
 
-            <!-- Progress Bar -->
+            <!-- Progress Bar with Distributed Icons -->
             <div class="progress-container" *ngIf="running()">
                 <div class="progress-bar">
                     <div class="progress-fill" [style.width.%]="progress()"></div>
-                    <div class="progress-content">
-                        <div class="progress-icons">
-              <span class="progress-app-icon" *ngFor="let st of getCompletedSteps()">
-                {{ getAppIcon(st.id) }}
-              </span>
+                    <div class="progress-content-distributed">
+                        <div class="progress-icons-distributed">
+                            <span class="progress-app-icon-distributed"
+                                  *ngFor="let st of stableSteps(); let i = index"
+                                  [class.completed]="st.status === 'SUCCESS' || st.status === 'DONE'"
+                                  [style.left.%]="(i / (stableSteps().length - 1)) * 100">
+                                {{ getAppIcon(st.id) }}
+                            </span>
                         </div>
                         <div class="progress-percentage">{{ progress() }}%</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Steps List -->
-            <ul class="steps-list" *ngIf="steps().length > 0">
-                <li class="step-item" *ngFor="let st of steps()">
+            <!-- Steps List (Anti-flickering with trackBy) -->
+            <ul class="steps-list" *ngIf="stableSteps().length > 0">
+                <li class="step-item" *ngFor="let st of stableSteps(); trackBy: trackByStepId">
           <span class="step-icon">
             <span *ngIf="st.id === 'frontend'">⚛️</span>
             <span *ngIf="st.id === 'backend'">🔧</span>
@@ -400,15 +453,19 @@
                 <div class="logs-title">
                     <span>📡</span>
                     <span>Live Logs</span>
+                    <span *ngIf="logs().length > 0" style="margin-left: auto; font-size: 12px; opacity: 0.6;">
+                        ({{ logs().length }} events)
+                    </span>
                 </div>
-                <div class="logs-container">
-                    <div class="log-line" *ngFor="let e of deploy.logs()">
-                        <span class="log-timestamp">{{ e.ts | date:'mediumTime' }}</span>
+                <div class="logs-container" #logsContainer>
+                    <div class="log-line" *ngFor="let e of logs(); trackBy: trackByLogTimestamp">
+                        <span class="log-timestamp">{{ e.ts | date:'HH:mm:ss' }}</span>
                         <span class="log-separator">—</span>
                         <span class="log-message">{{ e.line }}</span>
                     </div>
-                    <div *ngIf="deploy.logs().length === 0" style="color: rgba(255,255,255,0.4); text-align: center; padding: 40px 0;">
-                        No logs yet...
+                    <div *ngIf="logs().length === 0" style="color: rgba(255,255,255,0.4); text-align: center; padding: 40px 0;">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📡</div>
+                        <div>Waiting for logs...</div>
                     </div>
                 </div>
             </div>

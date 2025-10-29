@@ -333,21 +333,20 @@
     color: #ffffff;
 }
 
-/* === PROGRESS BAR === */
+/* === PROGRESS BAR - DISTRIBUTED ICONS === */
 .progress-container {
     margin: 24px 0;
 }
 
 .progress-bar {
-    height: 48px;
+    height: 64px;
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 16px;
-    overflow: hidden;
+    overflow: visible;
     position: relative;
     display: flex;
     align-items: center;
-    padding: 0 16px;
 }
 
 .progress-fill {
@@ -361,29 +360,62 @@
     box-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
 }
 
-.progress-content {
+.progress-content-distributed {
     position: relative;
     z-index: 2;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
 }
 
-.progress-icons {
+.progress-icons-distributed {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    height: 40px;
     display: flex;
-    gap: 8px;
     align-items: center;
 }
 
-.progress-app-icon {
-    font-size: 24px;
-    animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+.progress-app-icon-distributed {
+    position: absolute;
+    font-size: 32px;
+    transform: translate(-50%, 0);
     filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    opacity: 0.4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.progress-app-icon-distributed.completed {
+    opacity: 1;
+    animation: iconPulse 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes iconPulse {
+    0% {
+        transform: translate(-50%, 0) scale(0.5);
+        opacity: 0;
+    }
+    50% {
+        transform: translate(-50%, 0) scale(1.3);
+    }
+    100% {
+        transform: translate(-50%, 0) scale(1);
+        opacity: 1;
+    }
 }
 
 .progress-percentage {
-    font-size: 18px;
+    position: absolute;
+    right: 24px;
+    font-size: 20px;
     font-weight: 700;
     color: #ffffff;
     text-shadow: 0 2px 8px rgba(0,0,0,0.4);
@@ -404,7 +436,7 @@
     }
 }
 
-/* === STEPS LIST === */
+/* === STEPS LIST - ANTI-FLICKERING === */
 .steps-list {
     list-style: none;
     padding: 0;
@@ -419,7 +451,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    animation: slideInRight 0.3s ease-out;
+    /* REMOVED animation to prevent flickering */
+    will-change: auto;
 }
 
 .step-icon {
@@ -446,6 +479,7 @@
     font-size: 12px;
     font-weight: 600;
     text-transform: uppercase;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .step-status.running {
@@ -681,5 +715,13 @@
 
     .apps-grid {
         grid-template-columns: 1fr;
+    }
+
+    .progress-bar {
+        height: 48px;
+    }
+
+    .progress-app-icon-distributed {
+        font-size: 22px;
     }
 }

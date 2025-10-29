@@ -34,9 +34,10 @@ export class DeployService {
     this.http.get<Platform>(`${environment.orchestratorUrl}/platform`).subscribe({
       next: (res) => {
         this.platform.set(res);
+        console.log('✅ Platform loaded:', res);
       },
       error: (err) => {
-        console.error('Failed to load platform:', err);
+        console.error('❌ Failed to load platform:', err);
         this.status.set(`Error loading platform: ${err?.error ?? err?.message}`);
       }
     });
@@ -56,17 +57,20 @@ export class DeployService {
     this.logs.set([]);
     this.running.set(true);
 
+    console.log('🚀 Starting deploy with apps:', apps);
+
     this.http.post<{ ok: boolean; operation: string; action: string }>(
         `${environment.orchestratorUrl}/platform/deploy`,
         { Apps: apps, Branch: branch }
     ).subscribe({
       next: (res) => {
         this.opName = res.operation;
+        console.log('✅ Deploy started. Operation ID:', res.operation);
         this.status.set(`Platform deployment started. Operation: ${res.operation}`);
         this.startPolling();
-        // Platform state will be reloaded only when deployment finishes
       },
       error: (err) => {
+        console.error('❌ Deploy failed:', err);
         this.running.set(false);
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
@@ -87,17 +91,21 @@ export class DeployService {
     this.logs.set([]);
     this.running.set(true);
 
+    console.log('➕ Adding apps:', apps);
+
     this.http.post<{ ok: boolean; operation: string; action: string; added: string[] }>(
         `${environment.orchestratorUrl}/platform/add`,
         { Apps: apps, Branch: branch }
     ).subscribe({
       next: (res) => {
         this.opName = res.operation;
+        console.log('✅ Add started. Operation ID:', res.operation);
         this.status.set(`Adding apps: ${res.added.join(', ')}. Operation: ${res.operation}`);
         this.startPolling();
         setTimeout(() => this.loadPlatform(), 1000);
       },
       error: (err) => {
+        console.error('❌ Add failed:', err);
         this.running.set(false);
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
@@ -118,17 +126,21 @@ export class DeployService {
     this.logs.set([]);
     this.running.set(true);
 
+    console.log('🗑️ Removing apps:', apps);
+
     this.http.post<{ ok: boolean; operation: string; action: string; removed: string[] }>(
         `${environment.orchestratorUrl}/platform/remove`,
         { Apps: apps, Branch: branch }
     ).subscribe({
       next: (res) => {
         this.opName = res.operation;
+        console.log('✅ Remove started. Operation ID:', res.operation);
         this.status.set(`Removing apps: ${res.removed.join(', ')}. Operation: ${res.operation}`);
         this.startPolling();
         setTimeout(() => this.loadPlatform(), 1000);
       },
       error: (err) => {
+        console.error('❌ Remove failed:', err);
         this.running.set(false);
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
@@ -139,16 +151,13 @@ export class DeployService {
   deletePlatform(branch: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
 
-    // Get current platform apps from Firestore
     const currentPlatform = this.platform();
     if (!currentPlatform || currentPlatform.deployed_apps.length === 0) {
       this.status.set('No platform to delete');
       return;
     }
 
-    // Set selected to ALL deployed apps from platform
     this.selected = currentPlatform.deployed_apps.map(a => a.toLowerCase());
-
     const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
 
     this.steps.set(seeded);
@@ -158,34 +167,48 @@ export class DeployService {
     this.logs.set([]);
     this.running.set(true);
 
+    console.log('🗑️ Deleting platform with apps:', this.selected);
+
     this.http.post<{ ok: boolean; operation: string; action: string }>(
         `${environment.orchestratorUrl}/platform/delete`,
         { Branch: branch }
     ).subscribe({
       next: (res) => {
         this.opName = res.operation;
+        console.log('✅ Delete started. Operation ID:', res.operation);
         this.status.set(`Platform deletion started. Operation: ${res.operation}`);
         this.startPolling();
-        // Clear platform after deletion starts
         setTimeout(() => this.loadPlatform(), 1000);
       },
       error: (err) => {
+        console.error('❌ Delete failed:', err);
         this.running.set(false);
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
     });
   }
 
-  // === POLLING (same as before) ===
+  // === POLLING ===
   private startPolling() {
+    let pollCount = 0;
+
     const tick = () => {
-      if (!this.opName) return;
+      if (!this.opName) {
+        console.warn('⚠️ No operation name, stopping poll');
+        return;
+      }
+
+      pollCount++;
 
       this.http.get<any>(
           `${environment.orchestratorUrl}/status`,
           { params: { operation: this.opName } }
       ).subscribe({
         next: (res) => {
+          if (pollCount === 1) {
+            console.log('📊 First poll response:', res);
+          }
+
           const old = this.steps();
           const map = new Map<string, Step>();
           for (const s of old) map.set(s.id.toLowerCase(), s);
@@ -217,34 +240,52 @@ export class DeployService {
           this.status.set(stateTxt);
           if (res?.logs) this.logsUrl.set(res.logs);
 
+          // === IMPROVED LOGS PARSING ===
           if (Array.isArray(res?.events) && res.events.length > 0) {
-            const newLogs = (res.events as string[]).map((eventLine: string) => {
+            console.log(`📝 Received ${res.events.length} log events`);
+
+            const newLogs = (res.events as string[]).map((eventLine: string, idx: number) => {
+              // Try to parse timestamp from log line
               const match = eventLine.match(/^(\d{2}:\d{2}:\d{2})\s+(.+)$/);
+
               if (match) {
                 const now = new Date();
                 const [h, m, s] = match[1].split(':').map(Number);
                 const ts = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
                 return { ts: ts.toISOString(), line: match[2] };
               } else {
-                return { ts: new Date().toISOString(), line: eventLine };
+                // If no timestamp in line, use current time with incrementing milliseconds
+                const ts = new Date(Date.now() + idx);
+                return { ts: ts.toISOString(), line: eventLine };
               }
             });
+
             this.logs.set(newLogs);
+
+            if (pollCount <= 3) {
+              console.log('📝 Sample logs:', newLogs.slice(0, 3));
+            }
+          } else {
+            if (pollCount === 1) {
+              console.log('⚠️ No events in response');
+            }
           }
 
           if (doneFlag) {
+            console.log('✅ Operation complete after', pollCount, 'polls');
             this.running.set(false);
             if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
-            // Reload platform state when done
             this.loadPlatform();
           }
         },
         error: (err) => {
+          console.error('❌ Polling error:', err);
           this.status.set(`Error polling status: ${err?.error ?? err?.message ?? err}`);
         }
       });
     };
 
+    console.log('🔄 Starting polling every 300ms');
     tick();
     this.pollTimer = setInterval(tick, 300);
   }
