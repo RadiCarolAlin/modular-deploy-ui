@@ -15,6 +15,13 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   private _currentTab = signal('deploy');
   get currentTab() { return this._currentTab(); }
   set currentTab(value: string) {
+    // SINGLE GUARD: Check if completely idle
+    if (!this.isCompletelyIdle()) {
+      console.warn('⚠️ Cannot switch tabs - system is busy');
+      this.deploy.status.set('⚠️ Please wait until operation fully completes...');
+      return;
+    }
+
     // Reset all checkboxes when changing tabs
     if (this._currentTab() !== value) {
       console.log(`🔄 Switching from ${this._currentTab()} to ${value}`);
@@ -73,6 +80,9 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   logsUrl = this.deploy.logsUrl.asReadonly();
   platform = this.deploy.platform.asReadonly();
   logs = this.deploy.logs.asReadonly();
+
+  // NEW: Track if service is completely idle (no operation AND no loading)
+  isCompletelyIdle = this.deploy.isCompletelyIdle;
 
   // === COMPUTED: Check which apps are deployed (for disabling checkboxes) ===
   isAppDeployed = computed(() => {
@@ -177,9 +187,10 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
 
   // === ACTIONS ===
   runDeployPlatform() {
-    // Guard: prevent double-click
-    if (this.running()) {
-      console.warn('Deploy already in progress');
+    // Guard: wait until completely idle
+    if (!this.isCompletelyIdle()) {
+      console.warn('⚠️ System is busy, please wait...');
+      this.deploy.status.set('⚠️ Please wait until previous operation fully completes...');
       return;
     }
 
@@ -194,9 +205,10 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   }
 
   runAddApps() {
-    // Guard: prevent double-click
-    if (this.running()) {
-      console.warn('Operation already in progress');
+    // Guard: wait until completely idle
+    if (!this.isCompletelyIdle()) {
+      console.warn('⚠️ System is busy, please wait...');
+      this.deploy.status.set('⚠️ Please wait until previous operation fully completes...');
       return;
     }
 
@@ -226,9 +238,10 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   }
 
   runRemoveApps() {
-    // Guard: prevent double-click
-    if (this.running()) {
-      console.warn('Operation already in progress');
+    // Guard: wait until completely idle
+    if (!this.isCompletelyIdle()) {
+      console.warn('⚠️ System is busy, please wait...');
+      this.deploy.status.set('⚠️ Please wait until previous operation fully completes...');
       return;
     }
 
@@ -259,9 +272,10 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   }
 
   runDeletePlatform() {
-    // Guard: prevent double-click
-    if (this.running()) {
-      console.warn('Operation already in progress');
+    // Guard: wait until completely idle
+    if (!this.isCompletelyIdle()) {
+      console.warn('⚠️ System is busy, please wait...');
+      this.deploy.status.set('⚠️ Please wait until previous operation fully completes...');
       return;
     }
 

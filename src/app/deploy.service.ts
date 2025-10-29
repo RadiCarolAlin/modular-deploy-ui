@@ -23,12 +23,17 @@ export class DeployService {
   // Platform state
   platform = signal<Platform | null>(null);
 
+  // NEW: Track if completely idle (no operation AND no platform loading)
+  private _isCompletelyIdle = signal(true);
+  isCompletelyIdle = this._isCompletelyIdle.asReadonly();
+
   private opName: string | null = null;
   private pollTimer: any = null;
   private selected: string[] = [];
+  private isStopping = false;  // Flag to stop polling immediately
 
   // Anti-flickering: prevent multiple simultaneous platform loads
-  private isLoadingPlatform = false;
+  isLoadingPlatform = false;  // Made public for component access
   private lastPlatformLoad = 0;
   private platformLoadDebounce = 1000; // 1 second debounce
 
@@ -51,15 +56,23 @@ export class DeployService {
 
     this.isLoadingPlatform = true;
     this.lastPlatformLoad = now;
+    this._isCompletelyIdle.set(false);  // We're busy loading!
 
     this.http.get<Platform>(`${environment.orchestratorUrl}/platform`).subscribe({
       next: (res) => {
         this.platform.set(res);
         this.isLoadingPlatform = false;
+
+        // Check if we're truly idle now (no operation running)
+        if (!this.running()) {
+          this._isCompletelyIdle.set(true);  // Now we're truly idle!
+        }
+
         console.log('✅ Platform loaded:', res);
       },
       error: (err) => {
         this.isLoadingPlatform = false;
+        this._isCompletelyIdle.set(true);  // Error = idle
         console.error('❌ Failed to load platform:', err);
         this.status.set(`Error loading platform: ${err?.error ?? err?.message}`);
       }
@@ -69,6 +82,7 @@ export class DeployService {
   // === DEPLOY PLATFORM (Full deployment) ===
   deployPlatform(apps: string[], branch: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    this._isCompletelyIdle.set(false);  // Starting operation
 
     this.selected = apps.map(a => a.toLowerCase());
     const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
@@ -95,6 +109,7 @@ export class DeployService {
       error: (err) => {
         console.error('❌ Deploy failed:', err);
         this.running.set(false);
+        this._isCompletelyIdle.set(true);  // Error = idle
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
     });
@@ -103,6 +118,7 @@ export class DeployService {
   // === ADD APPS (Incremental addition) ===
   addApps(apps: string[], branch: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    this._isCompletelyIdle.set(false);  // Starting operation
 
     this.selected = apps.map(a => a.toLowerCase());
     const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
@@ -130,6 +146,7 @@ export class DeployService {
       error: (err) => {
         console.error('❌ Add failed:', err);
         this.running.set(false);
+        this._isCompletelyIdle.set(true);  // Error = idle
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
     });
@@ -138,6 +155,7 @@ export class DeployService {
   // === REMOVE APPS (Incremental removal) ===
   removeApps(apps: string[], branch: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    this._isCompletelyIdle.set(false);  // Starting operation
 
     this.selected = apps.map(a => a.toLowerCase());
     const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
@@ -165,6 +183,7 @@ export class DeployService {
       error: (err) => {
         console.error('❌ Remove failed:', err);
         this.running.set(false);
+        this._isCompletelyIdle.set(true);  // Error = idle
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
     });
@@ -173,10 +192,12 @@ export class DeployService {
   // === DELETE PLATFORM (Complete deletion) ===
   deletePlatform(branch: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    this._isCompletelyIdle.set(false);  // Starting operation
 
     const currentPlatform = this.platform();
     if (!currentPlatform || currentPlatform.deployed_apps.length === 0) {
       this.status.set('No platform to delete');
+      this._isCompletelyIdle.set(true);  // Nothing to do = idle
       return;
     }
 
@@ -192,9 +213,8 @@ export class DeployService {
 
     console.log('🗑️ Deleting platform with apps:', this.selected);
 
-    this.http.post<{ ok: boolean; operation: string; action: string }>(
-        `${environment.orchestratorUrl}/platform/delete`,
-        { Branch: branch }
+    this.http.delete<{ ok: boolean; operation: string; action: string }>(
+        `${environment.orchestratorUrl}/platform?branch=${encodeURIComponent(branch)}`
     ).subscribe({
       next: (res) => {
         this.opName = res.operation;
@@ -206,6 +226,7 @@ export class DeployService {
       error: (err) => {
         console.error('❌ Delete failed:', err);
         this.running.set(false);
+        this._isCompletelyIdle.set(true);  // Error = idle
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
     });
@@ -214,8 +235,15 @@ export class DeployService {
   // === POLLING ===
   private startPolling() {
     let pollCount = 0;
+    this.isStopping = false;  // Reset flag at start
+    this._isCompletelyIdle.set(false);  // Polling = busy
 
     const tick = () => {
+      // Check if we should stop
+      if (this.isStopping) {
+        return;  // Exit immediately if stopping
+      }
+
       if (!this.opName) {
         console.warn('⚠️ No operation name, stopping poll');
         return;
@@ -295,15 +323,33 @@ export class DeployService {
           }
 
           if (doneFlag) {
+            // Set stopping flag FIRST to prevent any more ticks
+            this.isStopping = true;
+
+            // STOP TIMER
+            if (this.pollTimer) {
+              clearInterval(this.pollTimer);
+              this.pollTimer = null;
+            }
+
             console.log('✅ Operation complete after', pollCount, 'polls');
             this.running.set(false);
-            if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+
+            // Platform will reload, which will set _isCompletelyIdle when done
             this.loadPlatform();
           }
         },
         error: (err) => {
           console.error('❌ Polling error:', err);
           this.status.set(`Error polling status: ${err?.error ?? err?.message ?? err}`);
+          this._isCompletelyIdle.set(true);  // Error = idle
+
+          // Stop polling on error
+          this.isStopping = true;
+          if (this.pollTimer) {
+            clearInterval(this.pollTimer);
+            this.pollTimer = null;
+          }
         }
       });
     };
