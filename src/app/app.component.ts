@@ -1,13 +1,13 @@
 // src/app/app.component.ts
 import { Component, signal, OnInit } from '@angular/core';
-import { NgIf, NgFor, DatePipe } from '@angular/common';
+import { NgIf, NgFor, DatePipe, TitleCasePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DeployService } from './deploy.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [NgIf, NgFor, DatePipe, FormsModule],
+  imports: [NgIf, NgFor, DatePipe, TitleCasePipe, FormsModule],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css'],
 })

@@ -1,250 +1,389 @@
-<div style="max-width:800px;margin:32px auto;font-family:system-ui;">
-    <h2>Platform Manager</h2>
-
-    <!-- Tab Navigation -->
-    <div style="display:flex;gap:8px;margin:16px 0;border-bottom:2px solid #e0e0e0;">
-        <button
-                (click)="currentTab = 'deploy'"
-                [style.background]="currentTab === 'deploy' ? '#5a67d8' : '#f5f5f5'"
-                [style.color]="currentTab === 'deploy' ? 'white' : '#333'"
-                style="padding:10px 20px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;transition:all 0.2s;">
-            Deploy Platform
-        </button>
-        <button
-                (click)="currentTab = 'add'"
-                [style.background]="currentTab === 'add' ? '#5a67d8' : '#f5f5f5'"
-                [style.color]="currentTab === 'add' ? 'white' : '#333'"
-                style="padding:10px 20px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;transition:all 0.2s;">
-            Add Apps
-        </button>
-        <button
-                (click)="currentTab = 'remove'"
-                [style.background]="currentTab === 'remove' ? '#5a67d8' : '#f5f5f5'"
-                [style.color]="currentTab === 'remove' ? 'white' : '#333'"
-                style="padding:10px 20px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;transition:all 0.2s;">
-            Remove Apps
-        </button>
-        <button
-                (click)="currentTab = 'delete'"
-                [style.background]="currentTab === 'delete' ? '#ef4444' : '#f5f5f5'"
-                [style.color]="currentTab === 'delete' ? 'white' : '#333'"
-                style="padding:10px 20px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;transition:all 0.2s;">
-            Delete Platform
-        </button>
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <h1>🚀 Platform Manager</h1>
+        <p>Deploy, manage, and monitor your applications with ease</p>
     </div>
 
-    <!-- Platform Status -->
-    <div *ngIf="platform()" style="background:#f9fafb;padding:12px;border-radius:6px;margin-bottom:16px;border-left:4px solid #5a67d8;">
-        <strong>Platform Status:</strong>
-        <span [style.color]="platform()!.status === 'active' ? '#10b981' : '#f59e0b'">
-            {{ platform()!.status }}
-        </span>
-        <br>
-        <strong>Deployed Apps:</strong>
-        <span *ngIf="platform()!.deployed_apps.length === 0" style="color:#6b7280;">None</span>
-        <span *ngIf="platform()!.deployed_apps.length > 0">{{ platform()!.deployed_apps.join(', ') }}</span>
-    </div>
+    <!-- Main Card -->
+    <div class="main-card">
 
-    <!-- ========== TAB 1: DEPLOY PLATFORM ========== -->
-    <div *ngIf="currentTab === 'deploy'" style="animation:fadeIn 0.3s;">
-        <h3>Deploy Complete Platform</h3>
-        <p style="color:#6b7280;margin-bottom:16px;">Select applications to deploy. Frontend and Backend are required.</p>
-
-        <label style="display:block;margin-bottom:8px;">Branch:
-            <input [(ngModel)]="branch" placeholder="main" style="padding:6px 8px;margin-left:8px;border:1px solid #d1d5db;border-radius:4px;" />
-        </label>
-
-        <div style="margin:16px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#f9fafb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [checked]="true" disabled />
-                <span style="font-weight:500;">Frontend</span>
-                <span style="color:#dc2626;font-size:11px;margin-left:auto;">Required</span>
-            </label>
-
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#f9fafb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [checked]="true" disabled />
-                <span style="font-weight:500;">Backend</span>
-                <span style="color:#dc2626;font-size:11px;margin-left:auto;">Required</span>
-            </label>
-
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="deployGitea()" (ngModelChange)="onToggleDeployGitea($event)" />
-                <span>Gitea</span>
-            </label>
-
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="deployConfluence()" (ngModelChange)="onToggleDeployConfluence($event)" />
-                <span>Confluence</span>
-            </label>
-
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="deployJira()" (ngModelChange)="onToggleDeployJira($event)" />
-                <span>Jira</span>
-            </label>
-
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="deployArtifactory()" (ngModelChange)="onToggleDeployArtifactory($event)" />
-                <span>Artifactory</span>
-            </label>
-
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="deployGithub()" (ngModelChange)="onToggleDeployGithub($event)" />
-                <span>GitHub</span>
-            </label>
+        <!-- Tabs Navigation -->
+        <div class="tabs-nav">
+            <button
+                    class="tab-button"
+                    [class.active]="currentTab === 'deploy'"
+                    (click)="currentTab = 'deploy'">
+                Deploy Platform
+            </button>
+            <button
+                    class="tab-button"
+                    [class.active]="currentTab === 'add'"
+                    (click)="currentTab = 'add'">
+                Add Apps
+            </button>
+            <button
+                    class="tab-button"
+                    [class.active]="currentTab === 'remove'"
+                    (click)="currentTab = 'remove'">
+                Remove Apps
+            </button>
+            <button
+                    class="tab-button delete"
+                    [class.active]="currentTab === 'delete'"
+                    (click)="currentTab = 'delete'">
+                Delete Platform
+            </button>
         </div>
 
-        <button (click)="runDeployPlatform()" [disabled]="running()"
-                style="padding:10px 24px;background:#5a67d8;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;">
-            Deploy Platform
-        </button>
-    </div>
-
-    <!-- ========== TAB 2: ADD APPS ========== -->
-    <div *ngIf="currentTab === 'add'" style="animation:fadeIn 0.3s;">
-        <h3>Add Applications</h3>
-        <p style="color:#6b7280;margin-bottom:16px;">Add new applications to your existing platform.</p>
-
-        <label style="display:block;margin-bottom:8px;">Branch:
-            <input [(ngModel)]="branch" placeholder="main" style="padding:6px 8px;margin-left:8px;border:1px solid #d1d5db;border-radius:4px;" />
-        </label>
-
-        <div style="margin:16px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="addGitea()" (ngModelChange)="onToggleAddGitea($event)" />
-                <span>Gitea</span>
-            </label>
-
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="addConfluence()" (ngModelChange)="onToggleAddConfluence($event)" />
-                <span>Confluence</span>
-            </label>
-
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="addJira()" (ngModelChange)="onToggleAddJira($event)" />
-                <span>Jira</span>
-            </label>
-
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="addArtifactory()" (ngModelChange)="onToggleAddArtifactory($event)" />
-                <span>Artifactory</span>
-            </label>
-
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="addGithub()" (ngModelChange)="onToggleAddGithub($event)" />
-                <span>GitHub</span>
-            </label>
+        <!-- Platform Status Card -->
+        <div class="tab-content" *ngIf="platform()">
+            <div class="platform-status">
+                <div class="status-icon">
+                    <span *ngIf="platform()!.status === 'active'">✅</span>
+                    <span *ngIf="platform()!.status === 'deploying'">⚙️</span>
+                    <span *ngIf="platform()!.status === 'not_deployed'">⭕</span>
+                </div>
+                <div class="status-content">
+                    <div class="status-label">Platform Status</div>
+                    <div class="status-value" [class.active]="platform()!.status === 'active'"
+                         [class.deploying]="platform()!.status === 'deploying'"
+                         [class.not-deployed]="platform()!.status === 'not_deployed'">
+                        {{ platform()!.status | titlecase }}
+                    </div>
+                    <div class="status-apps" *ngIf="platform()!.deployed_apps.length > 0">
+                        <strong>Deployed:</strong> {{ platform()!.deployed_apps.join(', ') }}
+                    </div>
+                    <div class="status-apps" *ngIf="platform()!.deployed_apps.length === 0">
+                        <strong>No applications deployed</strong>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <button (click)="runAddApps()" [disabled]="running()"
-                style="padding:10px 24px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;">
-            Add Selected Apps
-        </button>
-    </div>
+        <!-- ========== TAB 1: DEPLOY PLATFORM ========== -->
+        <div class="tab-content" *ngIf="currentTab === 'deploy'">
+            <h2>Deploy Complete Platform</h2>
+            <p class="subtitle">Select applications to deploy. Frontend and Backend are required.</p>
 
-    <!-- ========== TAB 3: REMOVE APPS ========== -->
-    <div *ngIf="currentTab === 'remove'" style="animation:fadeIn 0.3s;">
-        <h3>Remove Applications</h3>
-        <p style="color:#6b7280;margin-bottom:16px;">Remove applications from your platform. Frontend and Backend cannot be removed.</p>
+            <div class="form-group">
+                <label class="form-label">Branch</label>
+                <input
+                        class="form-input"
+                        [(ngModel)]="branch"
+                        placeholder="main" />
+            </div>
 
-        <label style="display:block;margin-bottom:8px;">Branch:
-            <input [(ngModel)]="branch" placeholder="main" style="padding:6px 8px;margin-left:8px;border:1px solid #d1d5db;border-radius:4px;" />
-        </label>
+            <div class="apps-grid">
+                <!-- Frontend (Required) -->
+                <div class="app-card disabled">
+                    <input type="checkbox" class="app-checkbox" [checked]="true" disabled />
+                    <span class="app-name">Frontend</span>
+                    <span class="app-badge">Required</span>
+                </div>
 
-        <div style="margin:16px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="removeGitea()" (ngModelChange)="onToggleRemoveGitea($event)" />
-                <span>Gitea</span>
-            </label>
+                <!-- Backend (Required) -->
+                <div class="app-card disabled">
+                    <input type="checkbox" class="app-checkbox" [checked]="true" disabled />
+                    <span class="app-name">Backend</span>
+                    <span class="app-badge">Required</span>
+                </div>
 
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="removeConfluence()" (ngModelChange)="onToggleRemoveConfluence($event)" />
-                <span>Confluence</span>
-            </label>
+                <!-- Gitea -->
+                <div class="app-card" (click)="onToggleDeployGitea(!deployGitea())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="deployGitea()"
+                            (ngModelChange)="onToggleDeployGitea($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Gitea</span>
+                </div>
 
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="removeJira()" (ngModelChange)="onToggleRemoveJira($event)" />
-                <span>Jira</span>
-            </label>
+                <!-- Confluence -->
+                <div class="app-card" (click)="onToggleDeployConfluence(!deployConfluence())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="deployConfluence()"
+                            (ngModelChange)="onToggleDeployConfluence($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Confluence</span>
+                </div>
 
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="removeArtifactory()" (ngModelChange)="onToggleRemoveArtifactory($event)" />
-                <span>Artifactory</span>
-            </label>
+                <!-- Jira -->
+                <div class="app-card" (click)="onToggleDeployJira(!deployJira())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="deployJira()"
+                            (ngModelChange)="onToggleDeployJira($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Jira</span>
+                </div>
 
-            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
-                <input type="checkbox" [ngModel]="removeGithub()" (ngModelChange)="onToggleRemoveGithub($event)" />
-                <span>GitHub</span>
-            </label>
+                <!-- Artifactory -->
+                <div class="app-card" (click)="onToggleDeployArtifactory(!deployArtifactory())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="deployArtifactory()"
+                            (ngModelChange)="onToggleDeployArtifactory($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Artifactory</span>
+                </div>
+
+                <!-- GitHub -->
+                <div class="app-card" (click)="onToggleDeployGithub(!deployGithub())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="deployGithub()"
+                            (ngModelChange)="onToggleDeployGithub($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">GitHub</span>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" (click)="runDeployPlatform()" [disabled]="running()">
+                <span>🚀</span>
+                <span>Deploy Platform</span>
+            </button>
         </div>
 
-        <button (click)="runRemoveApps()" [disabled]="running()"
-                style="padding:10px 24px;background:#ef4444;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;">
-            Remove Selected Apps
-        </button>
-    </div>
+        <!-- ========== TAB 2: ADD APPS ========== -->
+        <div class="tab-content" *ngIf="currentTab === 'add'">
+            <h2>Add Applications</h2>
+            <p class="subtitle">Add new applications to your existing platform.</p>
 
-    <!-- ========== TAB 4: DELETE PLATFORM ========== -->
-    <div *ngIf="currentTab === 'delete'" style="animation:fadeIn 0.3s;">
-        <h3 style="color:#dc2626;">⚠️ Delete Entire Platform</h3>
-        <p style="color:#6b7280;margin-bottom:16px;">
-            This will permanently delete the entire platform and all deployed applications.
-            <strong>This action cannot be undone!</strong>
-        </p>
+            <div class="form-group">
+                <label class="form-label">Branch</label>
+                <input
+                        class="form-input"
+                        [(ngModel)]="branch"
+                        placeholder="main" />
+            </div>
 
-        <div style="background:#fef2f2;border:2px solid #fecaca;border-radius:8px;padding:16px;margin:16px 0;">
-            <p style="color:#991b1b;font-weight:500;margin-bottom:8px;">⚠️ Warning:</p>
-            <ul style="color:#991b1b;margin-left:20px;">
-                <li>All applications will be undeployed</li>
-                <li>Platform data will be deleted from Firestore</li>
-                <li>You will need to deploy the platform again from scratch</li>
+            <div class="apps-grid">
+                <div class="app-card" (click)="onToggleAddGitea(!addGitea())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="addGitea()"
+                            (ngModelChange)="onToggleAddGitea($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Gitea</span>
+                </div>
+
+                <div class="app-card" (click)="onToggleAddConfluence(!addConfluence())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="addConfluence()"
+                            (ngModelChange)="onToggleAddConfluence($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Confluence</span>
+                </div>
+
+                <div class="app-card" (click)="onToggleAddJira(!addJira())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="addJira()"
+                            (ngModelChange)="onToggleAddJira($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Jira</span>
+                </div>
+
+                <div class="app-card" (click)="onToggleAddArtifactory(!addArtifactory())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="addArtifactory()"
+                            (ngModelChange)="onToggleAddArtifactory($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Artifactory</span>
+                </div>
+
+                <div class="app-card" (click)="onToggleAddGithub(!addGithub())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="addGithub()"
+                            (ngModelChange)="onToggleAddGithub($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">GitHub</span>
+                </div>
+            </div>
+
+            <button class="btn btn-success" (click)="runAddApps()" [disabled]="running()">
+                <span>➕</span>
+                <span>Add Selected Apps</span>
+            </button>
+        </div>
+
+        <!-- ========== TAB 3: REMOVE APPS ========== -->
+        <div class="tab-content" *ngIf="currentTab === 'remove'">
+            <h2>Remove Applications</h2>
+            <p class="subtitle">Remove applications from your platform. Frontend and Backend cannot be removed.</p>
+
+            <div class="form-group">
+                <label class="form-label">Branch</label>
+                <input
+                        class="form-input"
+                        [(ngModel)]="branch"
+                        placeholder="main" />
+            </div>
+
+            <div class="apps-grid">
+                <div class="app-card" (click)="onToggleRemoveGitea(!removeGitea())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="removeGitea()"
+                            (ngModelChange)="onToggleRemoveGitea($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Gitea</span>
+                </div>
+
+                <div class="app-card" (click)="onToggleRemoveConfluence(!removeConfluence())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="removeConfluence()"
+                            (ngModelChange)="onToggleRemoveConfluence($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Confluence</span>
+                </div>
+
+                <div class="app-card" (click)="onToggleRemoveJira(!removeJira())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="removeJira()"
+                            (ngModelChange)="onToggleRemoveJira($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Jira</span>
+                </div>
+
+                <div class="app-card" (click)="onToggleRemoveArtifactory(!removeArtifactory())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="removeArtifactory()"
+                            (ngModelChange)="onToggleRemoveArtifactory($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">Artifactory</span>
+                </div>
+
+                <div class="app-card" (click)="onToggleRemoveGithub(!removeGithub())">
+                    <input
+                            type="checkbox"
+                            class="app-checkbox"
+                            [ngModel]="removeGithub()"
+                            (ngModelChange)="onToggleRemoveGithub($event)"
+                            (click)="$event.stopPropagation()" />
+                    <span class="app-name">GitHub</span>
+                </div>
+            </div>
+
+            <button class="btn btn-danger" (click)="runRemoveApps()" [disabled]="running()">
+                <span>🗑️</span>
+                <span>Remove Selected Apps</span>
+            </button>
+        </div>
+
+        <!-- ========== TAB 4: DELETE PLATFORM ========== -->
+        <div class="tab-content" *ngIf="currentTab === 'delete'">
+            <h2 style="color: #fca5a5;">⚠️ Delete Entire Platform</h2>
+            <p class="subtitle">This will permanently delete the entire platform and all deployed applications.</p>
+
+            <div class="warning-box">
+                <div class="warning-title">
+                    <span>⚠️</span>
+                    <span>Warning: This action cannot be undone!</span>
+                </div>
+                <ul class="warning-list">
+                    <li>All applications will be undeployed</li>
+                    <li>Platform data will be deleted from Firestore</li>
+                    <li>You will need to deploy the platform again from scratch</li>
+                </ul>
+            </div>
+
+            <div class="checkbox-confirm" (click)="deleteConfirmed = !deleteConfirmed">
+                <input
+                        type="checkbox"
+                        [(ngModel)]="deleteConfirmed"
+                        (click)="$event.stopPropagation()" />
+                <label>I understand that this action is permanent and cannot be undone</label>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Branch</label>
+                <input
+                        class="form-input"
+                        [(ngModel)]="branch"
+                        placeholder="main" />
+            </div>
+
+            <button class="btn btn-danger" (click)="runDeletePlatform()" [disabled]="running() || !deleteConfirmed">
+                <span>🗑️</span>
+                <span>Delete Entire Platform</span>
+            </button>
+        </div>
+
+        <!-- ========== PROGRESS & LOGS (Shared across all tabs) ========== -->
+        <div class="tab-content" *ngIf="running() || steps().length > 0">
+
+            <!-- Progress Bar -->
+            <div class="progress-container" *ngIf="running()">
+                <div class="progress-bar">
+                    <div class="progress-fill" [style.width.%]="progress()"></div>
+                </div>
+            </div>
+
+            <!-- Steps List -->
+            <ul class="steps-list" *ngIf="steps().length > 0">
+                <li class="step-item" *ngFor="let st of steps()">
+                    <span class="step-name">{{ st.id }}</span>
+                    <span class="step-status"
+                          [class.running]="st.status === 'RUNNING'"
+                          [class.success]="st.status === 'SUCCESS'"
+                          [class.failure]="st.status === 'FAILURE'">
+            {{ st.status }}
+          </span>
+                </li>
             </ul>
+
+            <!-- Live Logs -->
+            <div class="logs-section">
+                <div class="logs-title">
+                    <span>📡</span>
+                    <span>Live Logs</span>
+                </div>
+                <div class="logs-container">
+                    <div class="log-line" *ngFor="let e of deploy.logs()">
+                        <span class="log-timestamp">{{ e.ts | date:'mediumTime' }}</span>
+                        <span class="log-separator">—</span>
+                        <span class="log-message">{{ e.line }}</span>
+                    </div>
+                    <div *ngIf="deploy.logs().length === 0" style="color: rgba(255,255,255,0.4); text-align: center; padding: 40px 0;">
+                        No logs yet...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Message -->
+            <div class="status-message" *ngIf="status()">
+                {{ status() }}
+            </div>
+
+            <!-- Cloud Build Link -->
+            <a *ngIf="logsUrl()" [href]="logsUrl()!" target="_blank" rel="noreferrer" class="cloud-build-link">
+                <span>🔗</span>
+                <span>Open Cloud Build Logs</span>
+            </a>
         </div>
 
-        <label style="display:block;margin:16px 0;">
-            <input type="checkbox" [(ngModel)]="deleteConfirmed" style="margin-right:8px;" />
-            <span style="font-weight:500;">I understand that this action is permanent and cannot be undone</span>
-        </label>
-
-        <label style="display:block;margin-bottom:16px;">Branch:
-            <input [(ngModel)]="branch" placeholder="main" style="padding:6px 8px;margin-left:8px;border:1px solid #d1d5db;border-radius:4px;" />
-        </label>
-
-        <button (click)="runDeletePlatform()" [disabled]="running() || !deleteConfirmed"
-                style="padding:12px 32px;background:#dc2626;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:15px;">
-            🗑️ Delete Entire Platform
-        </button>
     </div>
-
-    <!-- ========== PROGRESS & LOGS (Shared) ========== -->
-    <div *ngIf="running()" style="height:10px;background:#eee;border-radius:6px;margin-top:16px;">
-        <div [style.width.%]="progress()" style="height:100%;background:#5a67d8;border-radius:6px;transition:width .2s;"></div>
-    </div>
-
-    <ul *ngIf="steps().length" style="margin-top:12px;padding-left:18px;">
-        <li *ngFor="let st of steps()">
-            <strong>{{ st.id || '(step)' }}</strong> — {{ st.status }}
-        </li>
-    </ul>
-
-    <h4 style="margin-top:16px">Live logs</h4>
-    <div style="height:260px; overflow:auto; border:1px solid #ddd; padding:8px; font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; background:#fafafa;">
-        <div *ngFor="let e of deploy.logs()">
-            <span style="opacity:.6">{{ e.ts | date:'mediumTime' }}</span>
-            <span> — </span>
-            <span>{{ e.line }}</span>
-        </div>
-    </div>
-
-    <p style="margin-top:12px;">{{ status() }}</p>
-
-    <p *ngIf="logsUrl()">
-        <a [href]="logsUrl()!" target="_blank" rel="noreferrer">Open Cloud Build Logs</a>
-    </p>
 </div>
-
-<style>
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(-10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-</style>
