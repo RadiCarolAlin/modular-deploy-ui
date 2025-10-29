@@ -24,6 +24,13 @@
                 style="padding:10px 20px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;transition:all 0.2s;">
             Remove Apps
         </button>
+        <button
+                (click)="currentTab = 'delete'"
+                [style.background]="currentTab === 'delete' ? '#ef4444' : '#f5f5f5'"
+                [style.color]="currentTab === 'delete' ? 'white' : '#333'"
+                style="padding:10px 20px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;transition:all 0.2s;">
+            Delete Platform
+        </button>
     </div>
 
     <!-- Platform Status -->
@@ -173,6 +180,38 @@
         <button (click)="runRemoveApps()" [disabled]="running()"
                 style="padding:10px 24px;background:#ef4444;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;">
             Remove Selected Apps
+        </button>
+    </div>
+
+    <!-- ========== TAB 4: DELETE PLATFORM ========== -->
+    <div *ngIf="currentTab === 'delete'" style="animation:fadeIn 0.3s;">
+        <h3 style="color:#dc2626;">⚠️ Delete Entire Platform</h3>
+        <p style="color:#6b7280;margin-bottom:16px;">
+            This will permanently delete the entire platform and all deployed applications.
+            <strong>This action cannot be undone!</strong>
+        </p>
+
+        <div style="background:#fef2f2;border:2px solid #fecaca;border-radius:8px;padding:16px;margin:16px 0;">
+            <p style="color:#991b1b;font-weight:500;margin-bottom:8px;">⚠️ Warning:</p>
+            <ul style="color:#991b1b;margin-left:20px;">
+                <li>All applications will be undeployed</li>
+                <li>Platform data will be deleted from Firestore</li>
+                <li>You will need to deploy the platform again from scratch</li>
+            </ul>
+        </div>
+
+        <label style="display:block;margin:16px 0;">
+            <input type="checkbox" [(ngModel)]="deleteConfirmed" style="margin-right:8px;" />
+            <span style="font-weight:500;">I understand that this action is permanent and cannot be undone</span>
+        </label>
+
+        <label style="display:block;margin-bottom:16px;">Branch:
+            <input [(ngModel)]="branch" placeholder="main" style="padding:6px 8px;margin-left:8px;border:1px solid #d1d5db;border-radius:4px;" />
+        </label>
+
+        <button (click)="runDeletePlatform()" [disabled]="running() || !deleteConfirmed"
+                style="padding:12px 32px;background:#dc2626;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:15px;">
+            🗑️ Delete Entire Platform
         </button>
     </div>
 

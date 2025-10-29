@@ -136,6 +136,41 @@ export class DeployService {
     });
   }
 
+  // === DELETE PLATFORM (Complete deletion) ===
+  deletePlatform(branch: string) {
+    if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+
+    // We don't know which apps are deployed yet, so show generic steps
+    const seeded: Step[] = [
+      { id: 'frontend', status: 'RUNNING' },
+      { id: 'backend', status: 'RUNNING' }
+    ];
+
+    this.steps.set(seeded);
+    this.progress.set(this.computePercent(seeded, false));
+    this.status.set('Deleting entire platform...');
+    this.logsUrl.set(null);
+    this.logs.set([]);
+    this.running.set(true);
+
+    this.http.post<{ ok: boolean; operation: string; action: string }>(
+        `${environment.orchestratorUrl}/platform/delete`,
+        { Branch: branch }
+    ).subscribe({
+      next: (res) => {
+        this.opName = res.operation;
+        this.status.set(`Platform deletion started. Operation: ${res.operation}`);
+        this.startPolling();
+        // Clear platform after deletion starts
+        setTimeout(() => this.loadPlatform(), 1000);
+      },
+      error: (err) => {
+        this.running.set(false);
+        this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
+      }
+    });
+  }
+
   // === POLLING (same as before) ===
   private startPolling() {
     const tick = () => {

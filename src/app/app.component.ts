@@ -12,8 +12,9 @@ import { DeployService } from './deploy.service';
   styleUrls: ['./app.component.css'],
 })
 export class AppComponent implements OnInit {
-  currentTab = 'deploy'; // deploy | add | remove
+  currentTab = 'deploy'; // deploy | add | remove | delete
   branch = 'main';
+  deleteConfirmed = false; // For delete platform confirmation
 
   // === DEPLOY PLATFORM CHECKBOXES ===
   private _deployGitea = signal(true);
@@ -132,5 +133,19 @@ export class AppComponent implements OnInit {
     }
 
     this.deploy.removeApps(apps, this.branch || 'main');
+  }
+
+  runDeletePlatform() {
+    if (!this.deleteConfirmed) {
+      this.deploy.status.set('Please confirm deletion by checking the checkbox');
+      return;
+    }
+
+    if (!confirm('Are you ABSOLUTELY SURE you want to delete the entire platform? This cannot be undone!')) {
+      return;
+    }
+
+    this.deploy.deletePlatform(this.branch || 'main');
+    this.deleteConfirmed = false; // Reset confirmation
   }
 }
