@@ -3,57 +3,140 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../environments/environment';
 
 type Step = { id: string; status: string };
+type Platform = {
+  id: string;
+  deployed_apps: string[];
+  created_at: string | null;
+  last_modified: string | null;
+  status: string;
+};
 
 @Injectable({ providedIn: 'root' })
 export class DeployService {
-  running  = signal(false);
+  running = signal(false);
   progress = signal(0);
-  steps    = signal<Step[]>([]);
-  status   = signal<string>('Ready.');
-  logsUrl  = signal<string | null>(null);
-
-  // === LOGS - folosim events din /status în loc de /logs separat ===
+  steps = signal<Step[]>([]);
+  status = signal<string>('Ready.');
+  logsUrl = signal<string | null>(null);
   logs = signal<{ ts: string; line: string }[]>([]);
+
+  // Platform state
+  platform = signal<Platform | null>(null);
 
   private opName: string | null = null;
   private pollTimer: any = null;
-
   private selected: string[] = [];
 
   constructor(private http: HttpClient) {}
 
-  run(targetsCsv: string, branch: string) {
-    if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
-
-    this.selected = targetsCsv
-        .split(',')
-        .map(s => s.trim().toLowerCase())
-        .filter(Boolean);
-
-    const seeded: Step[] = this.canonicalOrder().map(id => ({ id, status: 'RUNNING' }));
-    this.steps.set(seeded);
-    this.progress.set(this.computePercent(seeded, false));
-    this.status.set('WORKING');
-    this.logsUrl.set(null);
-    this.logs.set([]); // curățăm logurile
-    this.running.set(true);
-
-    this.http.post<{ ok: boolean; operation: string }>(
-        `${environment.orchestratorUrl}/run`,
-        { Targets: targetsCsv, Branch: branch || 'main' }
-    ).subscribe({
+  // === LOAD PLATFORM STATE ===
+  loadPlatform() {
+    this.http.get<Platform>(`${environment.orchestratorUrl}/platform`).subscribe({
       next: (res) => {
-        this.opName = res.operation;
-        this.status.set(`Pornit. Operation: ${res.operation}`);
-        this.startPolling();
+        this.platform.set(res);
       },
       error: (err) => {
-        this.running.set(false);
-        this.status.set(`Eroare start: ${err?.error ?? err?.message ?? err}`);
+        console.error('Failed to load platform:', err);
+        this.status.set(`Error loading platform: ${err?.error ?? err?.message}`);
       }
     });
   }
 
+  // === DEPLOY PLATFORM (Full deployment) ===
+  deployPlatform(apps: string[], branch: string) {
+    if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+
+    this.selected = apps.map(a => a.toLowerCase());
+    const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
+
+    this.steps.set(seeded);
+    this.progress.set(this.computePercent(seeded, false));
+    this.status.set('Deploying platform...');
+    this.logsUrl.set(null);
+    this.logs.set([]);
+    this.running.set(true);
+
+    this.http.post<{ ok: boolean; operation: string; action: string }>(
+        `${environment.orchestratorUrl}/platform/deploy`,
+        { Apps: apps, Branch: branch }
+    ).subscribe({
+      next: (res) => {
+        this.opName = res.operation;
+        this.status.set(`Platform deployment started. Operation: ${res.operation}`);
+        this.startPolling();
+        // Reload platform state after starting
+        setTimeout(() => this.loadPlatform(), 1000);
+      },
+      error: (err) => {
+        this.running.set(false);
+        this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
+      }
+    });
+  }
+
+  // === ADD APPS (Incremental addition) ===
+  addApps(apps: string[], branch: string) {
+    if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+
+    this.selected = apps.map(a => a.toLowerCase());
+    const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
+
+    this.steps.set(seeded);
+    this.progress.set(this.computePercent(seeded, false));
+    this.status.set('Adding applications...');
+    this.logsUrl.set(null);
+    this.logs.set([]);
+    this.running.set(true);
+
+    this.http.post<{ ok: boolean; operation: string; action: string; added: string[] }>(
+        `${environment.orchestratorUrl}/platform/add`,
+        { Apps: apps, Branch: branch }
+    ).subscribe({
+      next: (res) => {
+        this.opName = res.operation;
+        this.status.set(`Adding apps: ${res.added.join(', ')}. Operation: ${res.operation}`);
+        this.startPolling();
+        setTimeout(() => this.loadPlatform(), 1000);
+      },
+      error: (err) => {
+        this.running.set(false);
+        this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
+      }
+    });
+  }
+
+  // === REMOVE APPS (Incremental removal) ===
+  removeApps(apps: string[], branch: string) {
+    if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+
+    this.selected = apps.map(a => a.toLowerCase());
+    const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
+
+    this.steps.set(seeded);
+    this.progress.set(this.computePercent(seeded, false));
+    this.status.set('Removing applications...');
+    this.logsUrl.set(null);
+    this.logs.set([]);
+    this.running.set(true);
+
+    this.http.post<{ ok: boolean; operation: string; action: string; removed: string[] }>(
+        `${environment.orchestratorUrl}/platform/remove`,
+        { Apps: apps, Branch: branch }
+    ).subscribe({
+      next: (res) => {
+        this.opName = res.operation;
+        this.status.set(`Removing apps: ${res.removed.join(', ')}. Operation: ${res.operation}`);
+        this.startPolling();
+        setTimeout(() => this.loadPlatform(), 1000);
+      },
+      error: (err) => {
+        this.running.set(false);
+        this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
+      }
+    });
+  }
+
+  // === POLLING (same as before) ===
   private startPolling() {
     const tick = () => {
       if (!this.opName) return;
@@ -63,7 +146,6 @@ export class DeployService {
           { params: { operation: this.opName } }
       ).subscribe({
         next: (res) => {
-          // === STEPS ===
           const old = this.steps();
           const map = new Map<string, Step>();
           for (const s of old) map.set(s.id.toLowerCase(), s);
@@ -88,20 +170,17 @@ export class DeployService {
           const allSuccess = final.length > 0 && final.every(s => (s.status ?? '').toUpperCase() === 'SUCCESS');
           const stateTxt = doneFlag
               ? 'SUCCESS (done)'
-              : (allSuccess ? 'Finalizare (commit & loguri)...' : (res?.state ?? 'WORKING'));
+              : (allSuccess ? 'Finalizing...' : (res?.state ?? 'WORKING'));
 
           this.steps.set(final);
           this.progress.set(pct);
           this.status.set(stateTxt);
           if (res?.logs) this.logsUrl.set(res.logs);
 
-          // === LOGS - folosim "events" din răspunsul /status ===
           if (Array.isArray(res?.events) && res.events.length > 0) {
             const newLogs = (res.events as string[]).map((eventLine: string) => {
-              // Parsează timestamp-ul dacă e în format "HH:mm:ss  mesaj"
               const match = eventLine.match(/^(\d{2}:\d{2}:\d{2})\s+(.+)$/);
               if (match) {
-                // Construiește un timestamp complet (adaugă data curentă)
                 const now = new Date();
                 const [h, m, s] = match[1].split(':').map(Number);
                 const ts = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
@@ -110,18 +189,18 @@ export class DeployService {
                 return { ts: new Date().toISOString(), line: eventLine };
               }
             });
-
-            // Setăm logurile (nu adăugăm, înlocuim - events din backend sunt deja cumulative)
             this.logs.set(newLogs);
           }
 
           if (doneFlag) {
             this.running.set(false);
             if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+            // Reload platform state when done
+            this.loadPlatform();
           }
         },
         error: (err) => {
-          this.status.set(`Eroare status: ${err?.error ?? err?.message ?? err}`);
+          this.status.set(`Error polling status: ${err?.error ?? err?.message ?? err}`);
         }
       });
     };
@@ -130,7 +209,6 @@ export class DeployService {
     this.pollTimer = setInterval(tick, 300);
   }
 
-  // === Helpers ===
   private isCanonical(id: string): boolean {
     const CANON = ['frontend', 'backend', 'gitea', 'confluence', 'jira', 'artifactory', 'github'];
     return CANON.includes(id);
@@ -141,7 +219,7 @@ export class DeployService {
   }
 
   private computePercent(steps: Step[], done: boolean): number {
-    const doneSet = new Set(['SUCCESS','DONE','FAILURE','CANCELLED','INTERNAL_ERROR','TIMEOUT']);
+    const doneSet = new Set(['SUCCESS', 'DONE', 'FAILURE', 'CANCELLED', 'INTERNAL_ERROR', 'TIMEOUT']);
     const total = steps.length;
     const finished = steps.filter(s => doneSet.has((s.status ?? '').toUpperCase())).length;
     if (!total) return 0;

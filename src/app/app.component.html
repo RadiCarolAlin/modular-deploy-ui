@@ -1,85 +1,187 @@
-<div style="max-width:720px;margin:32px auto;font-family:system-ui;">
-    <h2>Modular Deploy</h2>
+<div style="max-width:800px;margin:32px auto;font-family:system-ui;">
+    <h2>Platform Manager</h2>
 
-    <label>Branch:
-        <input [(ngModel)]="branch" placeholder="main" />
-    </label>
-
-    <div style="margin:12px 0;">
-        <label>
-            <input
-                    type="checkbox"
-                    [ngModel]="fe()"
-                    (ngModelChange)="onToggleFe($event)"
-            />
-            Frontend
-        </label>
-
-        <label style="margin-left:16px;">
-            <input
-                    type="checkbox"
-                    [ngModel]="be()"
-                    (ngModelChange)="onToggleBe($event)"
-            />
-            Backend
-        </label>
-
-        <label style="margin-left:16px;">
-            <input
-                    type="checkbox"
-                    [ngModel]="gitea()"
-                    (ngModelChange)="onToggleGitea($event)"
-            />
-            Gitea
-        </label>
-
-        <label style="margin-left:16px;">
-            <input
-                    type="checkbox"
-                    [ngModel]="confluence()"
-                    (ngModelChange)="onToggleConfluence($event)"
-            />
-            Confluence
-        </label>
-
-        <label style="margin-left:16px;">
-            <input
-                    type="checkbox"
-                    [ngModel]="jira()"
-                    (ngModelChange)="onToggleJira($event)"
-            />
-            Jira
-        </label>
-
-        <label style="margin-left:16px;">
-            <input
-                    type="checkbox"
-                    [ngModel]="artifactory()"
-                    (ngModelChange)="onToggleArtifactory($event)"
-            />
-            Artifactory
-        </label>
-
-        <label style="margin-left:16px;">
-            <input
-                    type="checkbox"
-                    [ngModel]="github()"
-                    (ngModelChange)="onToggleGithub($event)"
-            />
-            GitHub
-        </label>
+    <!-- Tab Navigation -->
+    <div style="display:flex;gap:8px;margin:16px 0;border-bottom:2px solid #e0e0e0;">
+        <button
+                (click)="currentTab = 'deploy'"
+                [style.background]="currentTab === 'deploy' ? '#5a67d8' : '#f5f5f5'"
+                [style.color]="currentTab === 'deploy' ? 'white' : '#333'"
+                style="padding:10px 20px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;transition:all 0.2s;">
+            Deploy Platform
+        </button>
+        <button
+                (click)="currentTab = 'add'"
+                [style.background]="currentTab === 'add' ? '#5a67d8' : '#f5f5f5'"
+                [style.color]="currentTab === 'add' ? 'white' : '#333'"
+                style="padding:10px 20px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;transition:all 0.2s;">
+            Add Apps
+        </button>
+        <button
+                (click)="currentTab = 'remove'"
+                [style.background]="currentTab === 'remove' ? '#5a67d8' : '#f5f5f5'"
+                [style.color]="currentTab === 'remove' ? 'white' : '#333'"
+                style="padding:10px 20px;border:none;border-radius:6px 6px 0 0;cursor:pointer;font-weight:500;transition:all 0.2s;">
+            Remove Apps
+        </button>
     </div>
 
-    <button (click)="runSelected()" [disabled]="running()">Run selected</button>
-
-    <div *ngIf="running()" style="height:10px;background:#eee;border-radius:6px;margin-top:12px;">
-        <div
-                [style.width.%]="progress()"
-                style="height:100%;background:#5a67d8;border-radius:6px;transition:width .2s;"
-        ></div>
+    <!-- Platform Status -->
+    <div *ngIf="platform()" style="background:#f9fafb;padding:12px;border-radius:6px;margin-bottom:16px;border-left:4px solid #5a67d8;">
+        <strong>Platform Status:</strong>
+        <span [style.color]="platform()!.status === 'active' ? '#10b981' : '#f59e0b'">
+            {{ platform()!.status }}
+        </span>
+        <br>
+        <strong>Deployed Apps:</strong>
+        <span *ngIf="platform()!.deployed_apps.length === 0" style="color:#6b7280;">None</span>
+        <span *ngIf="platform()!.deployed_apps.length > 0">{{ platform()!.deployed_apps.join(', ') }}</span>
     </div>
 
-    <ul *ngIf="steps().length" style="margin-top:8px;padding-left:18px;">
+    <!-- ========== TAB 1: DEPLOY PLATFORM ========== -->
+    <div *ngIf="currentTab === 'deploy'" style="animation:fadeIn 0.3s;">
+        <h3>Deploy Complete Platform</h3>
+        <p style="color:#6b7280;margin-bottom:16px;">Select applications to deploy. Frontend and Backend are required.</p>
+
+        <label style="display:block;margin-bottom:8px;">Branch:
+            <input [(ngModel)]="branch" placeholder="main" style="padding:6px 8px;margin-left:8px;border:1px solid #d1d5db;border-radius:4px;" />
+        </label>
+
+        <div style="margin:16px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#f9fafb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [checked]="true" disabled />
+                <span style="font-weight:500;">Frontend</span>
+                <span style="color:#dc2626;font-size:11px;margin-left:auto;">Required</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:#f9fafb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [checked]="true" disabled />
+                <span style="font-weight:500;">Backend</span>
+                <span style="color:#dc2626;font-size:11px;margin-left:auto;">Required</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="deployGitea()" (ngModelChange)="onToggleDeployGitea($event)" />
+                <span>Gitea</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="deployConfluence()" (ngModelChange)="onToggleDeployConfluence($event)" />
+                <span>Confluence</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="deployJira()" (ngModelChange)="onToggleDeployJira($event)" />
+                <span>Jira</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="deployArtifactory()" (ngModelChange)="onToggleDeployArtifactory($event)" />
+                <span>Artifactory</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="deployGithub()" (ngModelChange)="onToggleDeployGithub($event)" />
+                <span>GitHub</span>
+            </label>
+        </div>
+
+        <button (click)="runDeployPlatform()" [disabled]="running()"
+                style="padding:10px 24px;background:#5a67d8;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;">
+            Deploy Platform
+        </button>
+    </div>
+
+    <!-- ========== TAB 2: ADD APPS ========== -->
+    <div *ngIf="currentTab === 'add'" style="animation:fadeIn 0.3s;">
+        <h3>Add Applications</h3>
+        <p style="color:#6b7280;margin-bottom:16px;">Add new applications to your existing platform.</p>
+
+        <label style="display:block;margin-bottom:8px;">Branch:
+            <input [(ngModel)]="branch" placeholder="main" style="padding:6px 8px;margin-left:8px;border:1px solid #d1d5db;border-radius:4px;" />
+        </label>
+
+        <div style="margin:16px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="addGitea()" (ngModelChange)="onToggleAddGitea($event)" />
+                <span>Gitea</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="addConfluence()" (ngModelChange)="onToggleAddConfluence($event)" />
+                <span>Confluence</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="addJira()" (ngModelChange)="onToggleAddJira($event)" />
+                <span>Jira</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="addArtifactory()" (ngModelChange)="onToggleAddArtifactory($event)" />
+                <span>Artifactory</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="addGithub()" (ngModelChange)="onToggleAddGithub($event)" />
+                <span>GitHub</span>
+            </label>
+        </div>
+
+        <button (click)="runAddApps()" [disabled]="running()"
+                style="padding:10px 24px;background:#10b981;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;">
+            Add Selected Apps
+        </button>
+    </div>
+
+    <!-- ========== TAB 3: REMOVE APPS ========== -->
+    <div *ngIf="currentTab === 'remove'" style="animation:fadeIn 0.3s;">
+        <h3>Remove Applications</h3>
+        <p style="color:#6b7280;margin-bottom:16px;">Remove applications from your platform. Frontend and Backend cannot be removed.</p>
+
+        <label style="display:block;margin-bottom:8px;">Branch:
+            <input [(ngModel)]="branch" placeholder="main" style="padding:6px 8px;margin-left:8px;border:1px solid #d1d5db;border-radius:4px;" />
+        </label>
+
+        <div style="margin:16px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="removeGitea()" (ngModelChange)="onToggleRemoveGitea($event)" />
+                <span>Gitea</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="removeConfluence()" (ngModelChange)="onToggleRemoveConfluence($event)" />
+                <span>Confluence</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="removeJira()" (ngModelChange)="onToggleRemoveJira($event)" />
+                <span>Jira</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="removeArtifactory()" (ngModelChange)="onToggleRemoveArtifactory($event)" />
+                <span>Artifactory</span>
+            </label>
+
+            <label style="display:flex;align-items:center;gap:8px;padding:8px;background:white;border:1px solid #e5e7eb;border-radius:6px;cursor:pointer;">
+                <input type="checkbox" [ngModel]="removeGithub()" (ngModelChange)="onToggleRemoveGithub($event)" />
+                <span>GitHub</span>
+            </label>
+        </div>
+
+        <button (click)="runRemoveApps()" [disabled]="running()"
+                style="padding:10px 24px;background:#ef4444;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:500;font-size:14px;">
+            Remove Selected Apps
+        </button>
+    </div>
+
+    <!-- ========== PROGRESS & LOGS (Shared) ========== -->
+    <div *ngIf="running()" style="height:10px;background:#eee;border-radius:6px;margin-top:16px;">
+        <div [style.width.%]="progress()" style="height:100%;background:#5a67d8;border-radius:6px;transition:width .2s;"></div>
+    </div>
+
+    <ul *ngIf="steps().length" style="margin-top:12px;padding-left:18px;">
         <li *ngFor="let st of steps()">
             <strong>{{ st.id || '(step)' }}</strong> — {{ st.status }}
         </li>
@@ -94,10 +196,16 @@
         </div>
     </div>
 
-
     <p style="margin-top:12px;">{{ status() }}</p>
 
     <p *ngIf="logsUrl()">
-        <a [href]="logsUrl()!" target="_blank" rel="noreferrer">Deschide logurile Cloud Build</a>
+        <a [href]="logsUrl()!" target="_blank" rel="noreferrer">Open Cloud Build Logs</a>
     </p>
 </div>
+
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
