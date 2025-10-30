@@ -31,6 +31,7 @@ export class DeployService {
   private pollTimer: any = null;
   private selected: string[] = [];
   private isStopping = false;  // Flag to stop polling immediately
+  private safetyTimeout: any = null;  // Safety delay after completion
 
   // Anti-flickering: prevent multiple simultaneous platform loads
   isLoadingPlatform = false;  // Made public for component access
@@ -82,6 +83,7 @@ export class DeployService {
   // === DEPLOY PLATFORM (Full deployment) ===
   deployPlatform(apps: string[], branch: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    if (this.safetyTimeout) { clearTimeout(this.safetyTimeout); this.safetyTimeout = null; }
     this._isCompletelyIdle.set(false);  // Starting operation
 
     this.selected = apps.map(a => a.toLowerCase());
@@ -118,6 +120,7 @@ export class DeployService {
   // === ADD APPS (Incremental addition) ===
   addApps(apps: string[], branch: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    if (this.safetyTimeout) { clearTimeout(this.safetyTimeout); this.safetyTimeout = null; }
     this._isCompletelyIdle.set(false);  // Starting operation
 
     this.selected = apps.map(a => a.toLowerCase());
@@ -155,6 +158,7 @@ export class DeployService {
   // === REMOVE APPS (Incremental removal) ===
   removeApps(apps: string[], branch: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    if (this.safetyTimeout) { clearTimeout(this.safetyTimeout); this.safetyTimeout = null; }
     this._isCompletelyIdle.set(false);  // Starting operation
 
     this.selected = apps.map(a => a.toLowerCase());
@@ -192,6 +196,7 @@ export class DeployService {
   // === DELETE PLATFORM (Complete deletion) ===
   deletePlatform(branch: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
+    if (this.safetyTimeout) { clearTimeout(this.safetyTimeout); this.safetyTimeout = null; }
     this._isCompletelyIdle.set(false);  // Starting operation
 
     const currentPlatform = this.platform();
@@ -213,8 +218,9 @@ export class DeployService {
 
     console.log('🗑️ Deleting platform with apps:', this.selected);
 
-    this.http.delete<{ ok: boolean; operation: string; action: string }>(
-        `${environment.orchestratorUrl}/platform?branch=${encodeURIComponent(branch)}`
+    this.http.post<{ ok: boolean; operation: string; action: string }>(
+        `${environment.orchestratorUrl}/platform/delete`,
+        { Branch: branch }
     ).subscribe({
       next: (res) => {
         this.opName = res.operation;
@@ -335,8 +341,21 @@ export class DeployService {
             console.log('✅ Operation complete after', pollCount, 'polls');
             this.running.set(false);
 
-            // Platform will reload, which will set _isCompletelyIdle when done
-            this.loadPlatform();
+            // Clear any existing safety timeout
+            if (this.safetyTimeout) {
+              clearTimeout(this.safetyTimeout);
+              this.safetyTimeout = null;
+            }
+
+            // Add safety delay: wait 2 seconds before marking as completely idle
+            console.log('⏳ Starting 3-second safety delay...');
+            this.safetyTimeout = setTimeout(() => {
+              console.log('✅ Safety delay complete - now fully idle');
+              this.safetyTimeout = null;
+
+              // Platform will reload, which will set _isCompletelyIdle when done
+              this.loadPlatform();
+            }, 3000);  // 2 second safety buffer
           }
         },
         error: (err) => {
