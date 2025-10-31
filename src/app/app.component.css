@@ -212,7 +212,7 @@
 /* === APPS GRID === */
 .apps-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 12px;
     margin-bottom: 24px;
 }
@@ -228,6 +228,8 @@
     cursor: pointer;
     transition: all 0.3s ease;
     position: relative;
+    overflow: hidden; /* Prevent badge from overflowing */
+    min-width: 0; /* Allow flex items to shrink below content size */
 }
 
 .app-card:hover {
@@ -273,19 +275,29 @@
     font-size: 15px;
     font-weight: 600;
     color: #ffffff;
+    min-width: 0; /* Allow text to shrink */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .app-badge {
-    font-size: 9px;
-    padding: 3px 6px;
-    background: rgba(239, 68, 68, 0.2);
-    color: #fca5a5;
-    border-radius: 4px;
-    font-weight: 600;
+    font-size: 8px;
+    padding: 4px 8px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(5, 150, 105, 0.25) 100%);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    border-radius: 6px;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.3px;
+    letter-spacing: 0.5px;
     white-space: nowrap;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: fit-content;
 }
 
 /* === BUTTONS === */

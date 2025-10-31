@@ -241,6 +241,7 @@ export class DeployService {
   // === POLLING ===
   private startPolling() {
     let pollCount = 0;
+    let completedPollId: number | null = null;  // Track which poll completed
     this.isStopping = false;  // Reset flag at start
     this._isCompletelyIdle.set(false);  // Polling = busy
 
@@ -256,12 +257,18 @@ export class DeployService {
       }
 
       pollCount++;
+      const thisPollId = pollCount;  // Capture poll ID for this request
 
       this.http.get<any>(
           `${environment.orchestratorUrl}/status`,
           { params: { operation: this.opName } }
       ).subscribe({
         next: (res) => {
+          // CRITICAL: If we already completed, ignore all other responses
+          if (completedPollId !== null) {
+            return;  // Already handled completion, ignore this response
+          }
+
           if (pollCount === 1) {
             console.log('📊 First poll response:', res);
           }
@@ -329,16 +336,19 @@ export class DeployService {
           }
 
           if (doneFlag) {
-            // Set stopping flag FIRST to prevent any more ticks
+            // CRITICAL: Mark this poll as the one that completed
+            completedPollId = thisPollId;
+
+            // Set stopping flag to prevent new requests
             this.isStopping = true;
 
-            // STOP TIMER
+            // STOP TIMER IMMEDIATELY
             if (this.pollTimer) {
               clearInterval(this.pollTimer);
               this.pollTimer = null;
             }
 
-            console.log('✅ Operation complete after', pollCount, 'polls');
+            console.log('✅ Operation complete after', thisPollId, 'polls');
             this.running.set(false);
 
             // Clear any existing safety timeout
@@ -347,15 +357,16 @@ export class DeployService {
               this.safetyTimeout = null;
             }
 
-            // Add safety delay: wait 2 seconds before marking as completely idle
-            console.log('⏳ Starting 3-second safety delay...');
+            // Wait 3 seconds, then reload platform
+            console.log('⏳ Waiting 3 seconds for backend to stabilize...');
             this.safetyTimeout = setTimeout(() => {
-              console.log('✅ Safety delay complete - now fully idle');
               this.safetyTimeout = null;
 
-              // Platform will reload, which will set _isCompletelyIdle when done
+              // Reload platform - this will set _isCompletelyIdle when done
               this.loadPlatform();
-            }, 3000);  // 2 second safety buffer
+
+              console.log('✅ Platform reload initiated');
+            }, 3000);
           }
         },
         error: (err) => {
