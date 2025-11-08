@@ -31,6 +31,8 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   }
 
   branch = 'main';
+  namespace = ''; // Platform namespace/name
+  userEmail = ''; // User email for deployment
   deleteConfirmed = false; // For delete platform confirmation
 
   // === DEPLOY PLATFORM CHECKBOXES ===
@@ -194,6 +196,17 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
       return;
     }
 
+    // Validate required fields
+    if (!this.namespace || this.namespace.trim() === '') {
+      this.deploy.status.set('❌ Platform namespace is required');
+      return;
+    }
+
+    if (!this.userEmail || this.userEmail.trim() === '') {
+      this.deploy.status.set('❌ User email is required');
+      return;
+    }
+
     const apps: string[] = ['frontend', 'backend']; // Always required
     if (this._deployGitea()) apps.push('gitea');
     if (this._deployConfluence()) apps.push('confluence');
@@ -201,7 +214,7 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
     if (this._deployArtifactory()) apps.push('artifactory');
     if (this._deployGithub()) apps.push('github');
 
-    this.deploy.deployPlatform(apps, this.branch || 'main');
+    this.deploy.deployPlatform(apps, this.branch || 'main', this.namespace.trim(), this.userEmail.trim());
   }
 
   runAddApps() {

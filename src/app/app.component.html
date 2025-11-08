@@ -80,6 +80,23 @@
                         placeholder="main" />
             </div>
 
+            <div class="form-group">
+                <label class="form-label">Platform Namespace / Name *</label>
+                <input
+                        class="form-input"
+                        [(ngModel)]="namespace"
+                        placeholder="e.g., my-platform, demo-env, prod-platform" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Executive Management Account *</label>
+                <input
+                        class="form-input"
+                        type="email"
+                        [(ngModel)]="userEmail"
+                        placeholder="your.email@company.com" />
+            </div>
+
             <div class="apps-grid">
                 <!-- Frontend (Required) -->
                 <div class="app-card disabled">

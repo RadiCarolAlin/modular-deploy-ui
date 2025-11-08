@@ -81,7 +81,7 @@ export class DeployService {
   }
 
   // === DEPLOY PLATFORM (Full deployment) ===
-  deployPlatform(apps: string[], branch: string) {
+  deployPlatform(apps: string[], branch: string, namespace: string, userEmail: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
     if (this.safetyTimeout) { clearTimeout(this.safetyTimeout); this.safetyTimeout = null; }
     this._isCompletelyIdle.set(false);  // Starting operation
@@ -97,10 +97,12 @@ export class DeployService {
     this.running.set(true);
 
     console.log('🚀 Starting deploy with apps:', apps);
+    console.log('📦 Namespace:', namespace);
+    console.log('👤 User:', userEmail);
 
     this.http.post<{ ok: boolean; operation: string; action: string }>(
         `${environment.orchestratorUrl}/platform/deploy`,
-        { Apps: apps, Branch: branch }
+        { Apps: apps, Branch: branch, Namespace: namespace, UserEmail: userEmail }
     ).subscribe({
       next: (res) => {
         this.opName = res.operation;
