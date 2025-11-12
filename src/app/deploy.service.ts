@@ -5,7 +5,9 @@ import { environment } from '../environments/environment';
 type Step = { id: string; status: string };
 type Platform = {
   id: string;
+  namespace_name: string;
   deployed_apps: string[];
+  user_email: string;
   created_at: string | null;
   last_modified: string | null;
   status: string;
@@ -20,36 +22,46 @@ export class DeployService {
   logsUrl = signal<string | null>(null);
   logs = signal<{ ts: string; line: string }[]>([]);
 
-  // Platform state
   platform = signal<Platform | null>(null);
+  availablePlatforms = signal<Platform[]>([]);
 
-  // NEW: Track if completely idle (no operation AND no platform loading)
   private _isCompletelyIdle = signal(true);
   isCompletelyIdle = this._isCompletelyIdle.asReadonly();
 
   private opName: string | null = null;
   private pollTimer: any = null;
   private selected: string[] = [];
-  private isStopping = false;  // Flag to stop polling immediately
-  private safetyTimeout: any = null;  // Safety delay after completion
+  private isStopping = false;
+  private safetyTimeout: any = null;
+  private currentNamespace: string = 'demo-platform';
 
-  // Anti-flickering: prevent multiple simultaneous platform loads
-  isLoadingPlatform = false;  // Made public for component access
+  isLoadingPlatform = false;
   private lastPlatformLoad = 0;
-  private platformLoadDebounce = 1000; // 1 second debounce
+  private platformLoadDebounce = 1000;
 
   constructor(private http: HttpClient) {}
 
-  // === LOAD PLATFORM STATE (with debouncing) ===
-  loadPlatform() {
-    // Debounce: don't reload if recently loaded
+  loadAllPlatforms() {
+    this.http.get<Platform[]>(`${environment.orchestratorUrl}/platforms`).subscribe({
+      next: (platforms) => {
+        this.availablePlatforms.set(platforms);
+        console.log('📋 Loaded all platforms:', platforms);
+      },
+      error: (err) => {
+        console.error('❌ Failed to load platforms:', err);
+      }
+    });
+  }
+
+  loadPlatform(namespace?: string) {
+    const targetNamespace = namespace || this.currentNamespace;
+
     const now = Date.now();
     if (now - this.lastPlatformLoad < this.platformLoadDebounce) {
       console.log('⏱️ Platform load debounced (too soon)');
       return;
     }
 
-    // Prevent multiple simultaneous loads
     if (this.isLoadingPlatform) {
       console.log('⏱️ Platform load already in progress');
       return;
@@ -57,35 +69,39 @@ export class DeployService {
 
     this.isLoadingPlatform = true;
     this.lastPlatformLoad = now;
-    this._isCompletelyIdle.set(false);  // We're busy loading!
+    this._isCompletelyIdle.set(false);
 
-    this.http.get<Platform>(`${environment.orchestratorUrl}/platform`).subscribe({
+    const url = namespace
+        ? `${environment.orchestratorUrl}/platform/${namespace}`
+        : `${environment.orchestratorUrl}/platform`;
+
+    this.http.get<Platform>(url).subscribe({
       next: (res) => {
         this.platform.set(res);
+        this.currentNamespace = res.namespace_name || res.id;
         this.isLoadingPlatform = false;
 
-        // Check if we're truly idle now (no operation running)
         if (!this.running()) {
-          this._isCompletelyIdle.set(true);  // Now we're truly idle!
+          this._isCompletelyIdle.set(true);
         }
 
         console.log('✅ Platform loaded:', res);
       },
       error: (err) => {
         this.isLoadingPlatform = false;
-        this._isCompletelyIdle.set(true);  // Error = idle
+        this._isCompletelyIdle.set(true);
         console.error('❌ Failed to load platform:', err);
         this.status.set(`Error loading platform: ${err?.error ?? err?.message}`);
       }
     });
   }
 
-  // === DEPLOY PLATFORM (Full deployment) ===
   deployPlatform(apps: string[], branch: string, namespace: string, userEmail: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
     if (this.safetyTimeout) { clearTimeout(this.safetyTimeout); this.safetyTimeout = null; }
-    this._isCompletelyIdle.set(false);  // Starting operation
+    this._isCompletelyIdle.set(false);
 
+    this.currentNamespace = namespace;
     this.selected = apps.map(a => a.toLowerCase());
     const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
 
@@ -100,7 +116,7 @@ export class DeployService {
     console.log('📦 Namespace:', namespace);
     console.log('👤 User:', userEmail);
 
-    this.http.post<{ ok: boolean; operation: string; action: string }>(
+    this.http.post<{ ok: boolean; operation: string; action: string; namespace_name: string }>(
         `${environment.orchestratorUrl}/platform/deploy`,
         { Apps: apps, Branch: branch, Namespace: namespace, UserEmail: userEmail }
     ).subscribe({
@@ -113,18 +129,18 @@ export class DeployService {
       error: (err) => {
         console.error('❌ Deploy failed:', err);
         this.running.set(false);
-        this._isCompletelyIdle.set(true);  // Error = idle
+        this._isCompletelyIdle.set(true);
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
     });
   }
 
-  // === ADD APPS (Incremental addition) ===
-  addApps(apps: string[], branch: string) {
+  addApps(apps: string[], branch: string, namespace: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
     if (this.safetyTimeout) { clearTimeout(this.safetyTimeout); this.safetyTimeout = null; }
-    this._isCompletelyIdle.set(false);  // Starting operation
+    this._isCompletelyIdle.set(false);
 
+    this.currentNamespace = namespace;
     this.selected = apps.map(a => a.toLowerCase());
     const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
 
@@ -139,30 +155,29 @@ export class DeployService {
 
     this.http.post<{ ok: boolean; operation: string; action: string; added: string[] }>(
         `${environment.orchestratorUrl}/platform/add`,
-        { Apps: apps, Branch: branch }
+        { Apps: apps, Branch: branch, Namespace: namespace }
     ).subscribe({
       next: (res) => {
         this.opName = res.operation;
         console.log('✅ Add started. Operation ID:', res.operation);
         this.status.set(`Adding apps: ${res.added.join(', ')}. Operation: ${res.operation}`);
         this.startPolling();
-        // Platform will be reloaded when operation completes (in polling done handler)
       },
       error: (err) => {
         console.error('❌ Add failed:', err);
         this.running.set(false);
-        this._isCompletelyIdle.set(true);  // Error = idle
+        this._isCompletelyIdle.set(true);
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
     });
   }
 
-  // === REMOVE APPS (Incremental removal) ===
-  removeApps(apps: string[], branch: string) {
+  removeApps(apps: string[], branch: string, namespace: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
     if (this.safetyTimeout) { clearTimeout(this.safetyTimeout); this.safetyTimeout = null; }
-    this._isCompletelyIdle.set(false);  // Starting operation
+    this._isCompletelyIdle.set(false);
 
+    this.currentNamespace = namespace;
     this.selected = apps.map(a => a.toLowerCase());
     const seeded: Step[] = this.selected.map(id => ({ id, status: 'RUNNING' }));
 
@@ -177,34 +192,33 @@ export class DeployService {
 
     this.http.post<{ ok: boolean; operation: string; action: string; removed: string[] }>(
         `${environment.orchestratorUrl}/platform/remove`,
-        { Apps: apps, Branch: branch }
+        { Apps: apps, Branch: branch, Namespace: namespace }
     ).subscribe({
       next: (res) => {
         this.opName = res.operation;
         console.log('✅ Remove started. Operation ID:', res.operation);
         this.status.set(`Removing apps: ${res.removed.join(', ')}. Operation: ${res.operation}`);
         this.startPolling();
-        // Platform will be reloaded when operation completes (in polling done handler)
       },
       error: (err) => {
         console.error('❌ Remove failed:', err);
         this.running.set(false);
-        this._isCompletelyIdle.set(true);  // Error = idle
+        this._isCompletelyIdle.set(true);
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
     });
   }
 
-  // === DELETE PLATFORM (Complete deletion) ===
-  deletePlatform(branch: string) {
+  deletePlatform(branch: string, namespace: string) {
     if (this.pollTimer) { clearInterval(this.pollTimer); this.pollTimer = null; }
     if (this.safetyTimeout) { clearTimeout(this.safetyTimeout); this.safetyTimeout = null; }
-    this._isCompletelyIdle.set(false);  // Starting operation
+    this._isCompletelyIdle.set(false);
 
+    this.currentNamespace = namespace;
     const currentPlatform = this.platform();
     if (!currentPlatform || currentPlatform.deployed_apps.length === 0) {
       this.status.set('No platform to delete');
-      this._isCompletelyIdle.set(true);  // Nothing to do = idle
+      this._isCompletelyIdle.set(true);
       return;
     }
 
@@ -222,54 +236,45 @@ export class DeployService {
 
     this.http.post<{ ok: boolean; operation: string; action: string }>(
         `${environment.orchestratorUrl}/platform/delete`,
-        { Branch: branch }
+        { Branch: branch, Namespace: namespace }
     ).subscribe({
       next: (res) => {
         this.opName = res.operation;
         console.log('✅ Delete started. Operation ID:', res.operation);
         this.status.set(`Platform deletion started. Operation: ${res.operation}`);
         this.startPolling();
-        // Platform will be reloaded when operation completes (in polling done handler)
       },
       error: (err) => {
         console.error('❌ Delete failed:', err);
         this.running.set(false);
-        this._isCompletelyIdle.set(true);  // Error = idle
+        this._isCompletelyIdle.set(true);
         this.status.set(`Error: ${err?.error?.error ?? err?.message ?? err}`);
       }
     });
   }
 
-  // === POLLING ===
   private startPolling() {
     let pollCount = 0;
-    let completedPollId: number | null = null;  // Track which poll completed
-    this.isStopping = false;  // Reset flag at start
-    this._isCompletelyIdle.set(false);  // Polling = busy
+    let completedPollId: number | null = null;
+    this.isStopping = false;
+    this._isCompletelyIdle.set(false);
 
     const tick = () => {
-      // Check if we should stop
-      if (this.isStopping) {
-        return;  // Exit immediately if stopping
-      }
-
+      if (this.isStopping) return;
       if (!this.opName) {
         console.warn('⚠️ No operation name, stopping poll');
         return;
       }
 
       pollCount++;
-      const thisPollId = pollCount;  // Capture poll ID for this request
+      const thisPollId = pollCount;
 
       this.http.get<any>(
           `${environment.orchestratorUrl}/status`,
           { params: { operation: this.opName } }
       ).subscribe({
         next: (res) => {
-          // CRITICAL: If we already completed, ignore all other responses
-          if (completedPollId !== null) {
-            return;  // Already handled completion, ignore this response
-          }
+          if (completedPollId !== null) return;
 
           if (pollCount === 1) {
             console.log('📊 First poll response:', res);
@@ -306,45 +311,26 @@ export class DeployService {
           this.status.set(stateTxt);
           if (res?.logs) this.logsUrl.set(res.logs);
 
-          // === IMPROVED LOGS PARSING ===
           if (Array.isArray(res?.events) && res.events.length > 0) {
-            console.log(`📝 Received ${res.events.length} log events`);
-
             const newLogs = (res.events as string[]).map((eventLine: string, idx: number) => {
-              // Try to parse timestamp from log line
               const match = eventLine.match(/^(\d{2}:\d{2}:\d{2})\s+(.+)$/);
-
               if (match) {
                 const now = new Date();
                 const [h, m, s] = match[1].split(':').map(Number);
                 const ts = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
                 return { ts: ts.toISOString(), line: match[2] };
               } else {
-                // If no timestamp in line, use current time with incrementing milliseconds
                 const ts = new Date(Date.now() + idx);
                 return { ts: ts.toISOString(), line: eventLine };
               }
             });
-
             this.logs.set(newLogs);
-
-            if (pollCount <= 3) {
-              console.log('📝 Sample logs:', newLogs.slice(0, 3));
-            }
-          } else {
-            if (pollCount === 1) {
-              console.log('⚠️ No events in response');
-            }
           }
 
           if (doneFlag) {
-            // CRITICAL: Mark this poll as the one that completed
             completedPollId = thisPollId;
-
-            // Set stopping flag to prevent new requests
             this.isStopping = true;
 
-            // STOP TIMER IMMEDIATELY
             if (this.pollTimer) {
               clearInterval(this.pollTimer);
               this.pollTimer = null;
@@ -353,20 +339,16 @@ export class DeployService {
             console.log('✅ Operation complete after', thisPollId, 'polls');
             this.running.set(false);
 
-            // Clear any existing safety timeout
             if (this.safetyTimeout) {
               clearTimeout(this.safetyTimeout);
               this.safetyTimeout = null;
             }
 
-            // Wait 3 seconds, then reload platform
             console.log('⏳ Waiting 3 seconds for backend to stabilize...');
             this.safetyTimeout = setTimeout(() => {
               this.safetyTimeout = null;
-
-              // Reload platform - this will set _isCompletelyIdle when done
-              this.loadPlatform();
-
+              this.loadPlatform(this.currentNamespace);
+              this.loadAllPlatforms();
               console.log('✅ Platform reload initiated');
             }, 3000);
           }
@@ -374,9 +356,7 @@ export class DeployService {
         error: (err) => {
           console.error('❌ Polling error:', err);
           this.status.set(`Error polling status: ${err?.error ?? err?.message ?? err}`);
-          this._isCompletelyIdle.set(true);  // Error = idle
-
-          // Stop polling on error
+          this._isCompletelyIdle.set(true);
           this.isStopping = true;
           if (this.pollTimer) {
             clearInterval(this.pollTimer);

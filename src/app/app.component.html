@@ -36,36 +36,83 @@
             </button>
         </div>
 
-        <!-- Platform Status Card -->
-        <div class="tab-content" *ngIf="platform()">
-            <div class="platform-status">
-                <div class="status-icon">
-                    <span *ngIf="platform()!.status === 'active'">✅</span>
-                    <span *ngIf="platform()!.status === 'deploying' || platform()!.status === 'updating'">⚙️</span>
-                    <span *ngIf="platform()!.status === 'not_deployed'">⭕</span>
-                    <span *ngIf="platform()!.status === 'deleting'">🗑️</span>
-                </div>
-                <div class="status-content">
-                    <div class="status-label">Platform Status</div>
-                    <div class="status-value" [class.active]="platform()!.status === 'active'"
-                         [class.deploying]="platform()!.status === 'deploying' || platform()!.status === 'updating'"
-                         [class.not-deployed]="platform()!.status === 'not_deployed'">
-                        {{ platform()!.status | titlecase }}
+        <!-- ========= PLATFORM STATUS CARD (dinamic + fallback) ========= -->
+
+        <!-- dacă avem platforme disponibile în cluster -->
+        <ng-container *ngIf="deploy.availablePlatforms().length > 0; else noPlatformsCard">
+            <div class="tab-content" *ngIf="platform()">
+                <div class="platform-status">
+                    <div class="status-icon">
+                        <span *ngIf="platform()!.status === 'active'">✅</span>
+                        <span *ngIf="platform()!.status === 'deploying' || platform()!.status === 'updating'">⚙️</span>
+                        <span *ngIf="platform()!.status === 'not_deployed'">⭕</span>
+                        <span *ngIf="platform()!.status === 'deleting'">🗑️</span>
                     </div>
-                    <div class="status-apps" *ngIf="platform()!.deployed_apps.length > 0">
-                        <strong>Deployed:</strong>
-                        <span class="deployed-app" *ngFor="let app of platform()!.deployed_apps; let last = last">
-              <span class="app-icon-small">{{ getAppIcon(app) }}</span>
-              <span>{{ app }}</span>
-              <span *ngIf="!last">,</span>
-            </span>
-                    </div>
-                    <div class="status-apps" *ngIf="platform()!.deployed_apps.length === 0">
-                        <strong>No applications deployed</strong>
+                    <div class="status-content">
+                        <!-- header: titlu + dropdown namespaces -->
+                        <div class="status-header-row">
+                            <div class="status-label">Platform Status</div>
+
+                            <!-- dropdown namespaces -->
+                            <div class="status-namespace-selector"
+                                 *ngIf="deploy.availablePlatforms().length > 0">
+                                <span class="ns-select-label">Namespace</span>
+                                <select
+                                        class="ns-select"
+                                        [(ngModel)]="namespace"
+                                        (ngModelChange)="deploy.loadPlatform($event)">
+                                    <option
+                                            *ngFor="let p of deploy.availablePlatforms()"
+                                            [ngValue]="p.namespace_name">
+                                        {{ p.namespace_name }} ({{ p.deployed_apps?.length || 0 }} apps)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- status efectiv al platformei curente -->
+                        <div class="status-value"
+                             [class.active]="platform()!.status === 'active'"
+                             [class.deploying]="platform()!.status === 'deploying' || platform()!.status === 'updating'"
+                             [class.not-deployed]="platform()!.status === 'not_deployed'">
+                            {{ platform()!.status | titlecase }}
+                        </div>
+
+                        <div class="status-apps" *ngIf="platform()!.deployed_apps.length > 0">
+                            <strong>Deployed:</strong>
+                            <span class="deployed-app" *ngFor="let app of platform()!.deployed_apps; let last = last">
+                                <span class="app-icon-small">{{ getAppIcon(app) }}</span>
+                                <span>{{ app }}</span>
+                                <span *ngIf="!last">,</span>
+                            </span>
+                        </div>
+                        <div class="status-apps" *ngIf="platform()!.deployed_apps.length === 0">
+                            <strong>No applications deployed</strong>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </ng-container>
+
+        <!-- fallback când NU există nicio platformă în cluster -->
+        <ng-template #noPlatformsCard>
+            <div class="tab-content">
+                <div class="platform-status">
+                    <div class="status-icon">
+                        <span>⭕</span>
+                    </div>
+                    <div class="status-content">
+                        <div class="status-label">Platform Status</div>
+                        <div class="status-value not-deployed">
+                            Not_deployed
+                        </div>
+                        <div class="status-apps">
+                            <strong>No platform deployed yet</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </ng-template>
 
         <!-- ========== TAB 1: DEPLOY PLATFORM ========== -->
         <div class="tab-content" *ngIf="currentTab === 'deploy'">
@@ -446,22 +493,22 @@
             <!-- Steps List (Anti-flickering with trackBy) -->
             <ul class="steps-list" *ngIf="stableSteps().length > 0">
                 <li class="step-item" *ngFor="let st of stableSteps(); trackBy: trackByStepId">
-          <span class="step-icon">
-            <span *ngIf="st.id === 'frontend'">⚛️</span>
-            <span *ngIf="st.id === 'backend'">🔧</span>
-            <span *ngIf="st.id === 'gitea'">🦊</span>
-            <span *ngIf="st.id === 'confluence'">📚</span>
-            <span *ngIf="st.id === 'jira'">📋</span>
-            <span *ngIf="st.id === 'artifactory'">📦</span>
-            <span *ngIf="st.id === 'github'">🐙</span>
-          </span>
+                    <span class="step-icon">
+                        <span *ngIf="st.id === 'frontend'">⚛️</span>
+                        <span *ngIf="st.id === 'backend'">🔧</span>
+                        <span *ngIf="st.id === 'gitea'">🦊</span>
+                        <span *ngIf="st.id === 'confluence'">📚</span>
+                        <span *ngIf="st.id === 'jira'">📋</span>
+                        <span *ngIf="st.id === 'artifactory'">📦</span>
+                        <span *ngIf="st.id === 'github'">🐙</span>
+                    </span>
                     <span class="step-name">{{ st.id }}</span>
                     <span class="step-status"
                           [class.running]="st.status === 'RUNNING'"
                           [class.success]="st.status === 'SUCCESS'"
                           [class.failure]="st.status === 'FAILURE'">
-            {{ st.status }}
-          </span>
+                        {{ st.status }}
+                    </span>
                 </li>
             </ul>
 

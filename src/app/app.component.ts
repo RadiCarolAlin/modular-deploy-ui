@@ -15,14 +15,12 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   private _currentTab = signal('deploy');
   get currentTab() { return this._currentTab(); }
   set currentTab(value: string) {
-    // SINGLE GUARD: Check if completely idle
     if (!this.isCompletelyIdle()) {
       console.warn('⚠️ Cannot switch tabs - system is busy');
       this.deploy.status.set('⚠️ Please wait until operation fully completes...');
       return;
     }
 
-    // Reset all checkboxes when changing tabs
     if (this._currentTab() !== value) {
       console.log(`🔄 Switching from ${this._currentTab()} to ${value}`);
       this.resetAllCheckboxes();
@@ -31,11 +29,10 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   }
 
   branch = 'main';
-  namespace = ''; // Platform namespace/name
-  userEmail = ''; // User email for deployment
-  deleteConfirmed = false; // For delete platform confirmation
+  namespace = '';
+  userEmail = '';
+  deleteConfirmed = false;
 
-  // === DEPLOY PLATFORM CHECKBOXES ===
   private _deployGitea = signal(true);
   private _deployConfluence = signal(true);
   private _deployJira = signal(false);
@@ -48,7 +45,6 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   deployArtifactory = this._deployArtifactory.asReadonly();
   deployGithub = this._deployGithub.asReadonly();
 
-  // === ADD APPS CHECKBOXES ===
   private _addGitea = signal(false);
   private _addConfluence = signal(false);
   private _addJira = signal(false);
@@ -61,7 +57,6 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   addArtifactory = this._addArtifactory.asReadonly();
   addGithub = this._addGithub.asReadonly();
 
-  // === REMOVE APPS CHECKBOXES ===
   private _removeGitea = signal(false);
   private _removeConfluence = signal(false);
   private _removeJira = signal(false);
@@ -74,7 +69,6 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   removeArtifactory = this._removeArtifactory.asReadonly();
   removeGithub = this._removeGithub.asReadonly();
 
-  // === SERVICE SIGNALS ===
   running = this.deploy.running.asReadonly();
   progress = this.deploy.progress.asReadonly();
   steps = this.deploy.steps.asReadonly();
@@ -83,10 +77,8 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   platform = this.deploy.platform.asReadonly();
   logs = this.deploy.logs.asReadonly();
 
-  // NEW: Track if service is completely idle (no operation AND no loading)
   isCompletelyIdle = this.deploy.isCompletelyIdle;
 
-  // === COMPUTED: Check which apps are deployed (for disabling checkboxes) ===
   isAppDeployed = computed(() => {
     const p = this.platform();
     if (!p || !p.deployed_apps) return {
@@ -107,12 +99,10 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
     };
   });
 
-  // === COMPUTED: Memoized steps to prevent flickering ===
   private _lastStepsSnapshot: any[] = [];
   stableSteps = computed(() => {
     const current = this.steps();
 
-    // Only update if there's an actual change in status
     const hasChanged = current.length !== this._lastStepsSnapshot.length ||
         current.some((step, idx) => {
           const old = this._lastStepsSnapshot[idx];
@@ -131,24 +121,21 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   private _lastPlatformCheck = '';
 
   ngOnInit() {
-    // Load platform state on startup
     this.deploy.loadPlatform();
-    console.log('🎯 Component initialized, loading platform...');
+    this.deploy.loadAllPlatforms();
+    console.log('🎯 Component initialized, loading platforms...');
   }
 
-  // Debug: Log platform state changes (reduced frequency)
   ngDoCheck() {
     const platform = this.platform();
     if (platform && this._lastPlatformCheck !== JSON.stringify(platform.deployed_apps)) {
       this._lastPlatformCheck = JSON.stringify(platform.deployed_apps);
-      // Only log if there's an actual change in deployed apps
       console.log('📊 Platform state changed');
       console.log('   └─ Deployed apps:', platform.deployed_apps);
       console.log('   └─ Status:', platform.status);
     }
   }
 
-  // Auto-scroll logs to bottom when new logs arrive
   ngAfterViewChecked() {
     if (this.logs().length > 0) {
       this.scrollLogsToBottom();
@@ -161,42 +148,34 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
       if (logsContainer) {
         logsContainer.scrollTop = logsContainer.scrollHeight;
       }
-    } catch (err) {
-      // Ignore scroll errors
-    }
+    } catch (err) {}
   }
 
-  // === DEPLOY PLATFORM TOGGLES ===
   onToggleDeployGitea(v: boolean) { this._deployGitea.set(v); }
   onToggleDeployConfluence(v: boolean) { this._deployConfluence.set(v); }
   onToggleDeployJira(v: boolean) { this._deployJira.set(v); }
   onToggleDeployArtifactory(v: boolean) { this._deployArtifactory.set(v); }
   onToggleDeployGithub(v: boolean) { this._deployGithub.set(v); }
 
-  // === ADD APPS TOGGLES ===
   onToggleAddGitea(v: boolean) { this._addGitea.set(v); }
   onToggleAddConfluence(v: boolean) { this._addConfluence.set(v); }
   onToggleAddJira(v: boolean) { this._addJira.set(v); }
   onToggleAddArtifactory(v: boolean) { this._addArtifactory.set(v); }
   onToggleAddGithub(v: boolean) { this._addGithub.set(v); }
 
-  // === REMOVE APPS TOGGLES ===
   onToggleRemoveGitea(v: boolean) { this._removeGitea.set(v); }
   onToggleRemoveConfluence(v: boolean) { this._removeConfluence.set(v); }
   onToggleRemoveJira(v: boolean) { this._removeJira.set(v); }
   onToggleRemoveArtifactory(v: boolean) { this._removeArtifactory.set(v); }
   onToggleRemoveGithub(v: boolean) { this._removeGithub.set(v); }
 
-  // === ACTIONS ===
   runDeployPlatform() {
-    // Guard: wait until completely idle
     if (!this.isCompletelyIdle()) {
       console.warn('⚠️ System is busy, please wait...');
       this.deploy.status.set('⚠️ Please wait until previous operation fully completes...');
       return;
     }
 
-    // Validate required fields
     if (!this.namespace || this.namespace.trim() === '') {
       this.deploy.status.set('❌ Platform namespace is required');
       return;
@@ -207,7 +186,7 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
       return;
     }
 
-    const apps: string[] = ['frontend', 'backend']; // Always required
+    const apps: string[] = ['frontend', 'backend'];
     if (this._deployGitea()) apps.push('gitea');
     if (this._deployConfluence()) apps.push('confluence');
     if (this._deployJira()) apps.push('jira');
@@ -218,10 +197,14 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
   }
 
   runAddApps() {
-    // Guard: wait until completely idle
     if (!this.isCompletelyIdle()) {
       console.warn('⚠️ System is busy, please wait...');
       this.deploy.status.set('⚠️ Please wait until previous operation fully completes...');
+      return;
+    }
+
+    if (!this.namespace || this.namespace.trim() === '') {
+      this.deploy.status.set('❌ Platform namespace is required');
       return;
     }
 
@@ -232,29 +215,25 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
     if (this._addArtifactory()) apps.push('artifactory');
     if (this._addGithub()) apps.push('github');
 
-    console.log('➕ ADD APPS - Selected checkboxes:', {
-      gitea: this._addGitea(),
-      confluence: this._addConfluence(),
-      jira: this._addJira(),
-      artifactory: this._addArtifactory(),
-      github: this._addGithub()
-    });
     console.log('➕ ADD APPS - Apps to add:', apps);
-    console.log('➕ ADD APPS - Currently deployed:', this.platform()?.deployed_apps);
 
     if (apps.length === 0) {
       this.deploy.status.set('Please select at least one app to add');
       return;
     }
 
-    this.deploy.addApps(apps, this.branch || 'main');
+    this.deploy.addApps(apps, this.branch || 'main', this.namespace.trim());
   }
 
   runRemoveApps() {
-    // Guard: wait until completely idle
     if (!this.isCompletelyIdle()) {
       console.warn('⚠️ System is busy, please wait...');
       this.deploy.status.set('⚠️ Please wait until previous operation fully completes...');
+      return;
+    }
+
+    if (!this.namespace || this.namespace.trim() === '') {
+      this.deploy.status.set('❌ Platform namespace is required');
       return;
     }
 
@@ -265,27 +244,17 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
     if (this._removeArtifactory()) apps.push('artifactory');
     if (this._removeGithub()) apps.push('github');
 
-    console.log('🗑️ REMOVE APPS - Selected checkboxes:', {
-      gitea: this._removeGitea(),
-      confluence: this._removeConfluence(),
-      jira: this._removeJira(),
-      artifactory: this._removeArtifactory(),
-      github: this._removeGithub()
-    });
     console.log('🗑️ REMOVE APPS - Apps to remove:', apps);
-    console.log('🗑️ REMOVE APPS - Currently deployed:', this.platform()?.deployed_apps);
-    console.log('🗑️ REMOVE APPS - isAppDeployed:', this.isAppDeployed());
 
     if (apps.length === 0) {
       this.deploy.status.set('Please select at least one app to remove');
       return;
     }
 
-    this.deploy.removeApps(apps, this.branch || 'main');
+    this.deploy.removeApps(apps, this.branch || 'main', this.namespace.trim());
   }
 
   runDeletePlatform() {
-    // Guard: wait until completely idle
     if (!this.isCompletelyIdle()) {
       console.warn('⚠️ System is busy, please wait...');
       this.deploy.status.set('⚠️ Please wait until previous operation fully completes...');
@@ -297,15 +266,19 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
       return;
     }
 
+    if (!this.namespace || this.namespace.trim() === '') {
+      this.deploy.status.set('❌ Platform namespace is required');
+      return;
+    }
+
     if (!confirm('Are you ABSOLUTELY SURE you want to delete the entire platform? This cannot be undone!')) {
       return;
     }
 
-    this.deploy.deletePlatform(this.branch || 'main');
-    this.deleteConfirmed = false; // Reset confirmation
+    this.deploy.deletePlatform(this.branch || 'main', this.namespace.trim());
+    this.deleteConfirmed = false;
   }
 
-  // Get icon for each app
   getAppIcon(app: string): string {
     const icons: { [key: string]: string } = {
       'frontend': '⚛️',
@@ -314,19 +287,17 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
       'confluence': '📚',
       'jira': '📋',
       'artifactory': '📦',
-      'github': '🐙'
+      'github': '🙌'
     };
     return icons[app.toLowerCase()] || '🔹';
   }
 
-  // Get completed steps for progress bar
   getCompletedSteps() {
     return this.stableSteps().filter(st =>
         st.status === 'SUCCESS' || st.status === 'DONE'
     );
   }
 
-  // TrackBy functions to prevent flickering
   trackByStepId(index: number, step: any): string {
     return step.id;
   }
@@ -335,30 +306,25 @@ export class AppComponent implements OnInit, AfterViewChecked, DoCheck {
     return log.ts + log.line;
   }
 
-  // Reset all checkboxes when switching tabs
   private resetAllCheckboxes() {
-    // Reset Deploy checkboxes (keep defaults)
     this._deployGitea.set(true);
     this._deployConfluence.set(true);
     this._deployJira.set(false);
     this._deployArtifactory.set(false);
     this._deployGithub.set(false);
 
-    // Reset Add checkboxes
     this._addGitea.set(false);
     this._addConfluence.set(false);
     this._addJira.set(false);
     this._addArtifactory.set(false);
     this._addGithub.set(false);
 
-    // Reset Remove checkboxes
     this._removeGitea.set(false);
     this._removeConfluence.set(false);
     this._removeJira.set(false);
     this._removeArtifactory.set(false);
     this._removeGithub.set(false);
 
-    // Reset delete confirmation
     this.deleteConfirmed = false;
   }
 }
