@@ -780,3 +780,57 @@
         font-size: 22px;
     }
 }
+/* === ENHANCE: text & dropdown mai mare + bold + culori mai lizibile === */
+
+/* un pic mai mare textul de status */
+.status-value {
+    font-size: 20px;       /* before: 18px */
+    font-weight: 700;
+}
+
+/* label-ul "Namespace" mai vizibil */
+.ns-select-label {
+    font-size: 12px;       /* before: 10px */
+    font-weight: 700;
+    color: #a5b4fc;        /* indigo-200 */
+    letter-spacing: .8px;
+}
+
+/* dropdown-ul (pill) – mai mare, bold, culoare text albastru-deschis */
+.ns-select {
+    font-size: 14.5px;     /* before: 12px */
+    font-weight: 700;
+    padding: 10px 42px 10px 16px;   /* mai înalt + spațiu pt chevron */
+    color: #dbeafe;         /* sky-100 pe dark bg, mai lizibil decât alb pur */
+    border: 1px solid rgba(148,163,255,0.45);
+    background:
+            linear-gradient(180deg, rgba(37,50,92,0.55) 0%, rgba(20,27,54,0.55) 100%),
+            rgba(12,16,32,0.60);
+    box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.06),
+            0 6px 18px rgba(0,0,0,0.25);
+}
+
+/* hover/focus cu highlight albastru și text un pic mai luminos */
+.ns-select:hover {
+    border-color: #93c5fd; /* sky-300 */
+    color: #e0eaff;
+}
+.ns-select:focus {
+    outline: none;
+    border-color: #60a5fa; /* sky-400 */
+    box-shadow: 0 0 0 3px rgba(96,165,250,0.25);
+}
+
+/* mărim și opțiunile din listă */
+.ns-select option {
+    font-size: 14px;
+    font-weight: 600;
+    background: #0b1120;   /* dark */
+    color: #e5edff;        /* very light indigo */
+}
+
+/* puțin spațiu în plus între label și dropdown */
+.status-namespace-selector {
+    gap: 10px;  /* before: 6px */
+}

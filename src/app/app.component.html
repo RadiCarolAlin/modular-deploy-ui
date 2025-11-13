@@ -166,7 +166,8 @@
                     <input
                             type="checkbox"
                             class="app-checkbox"
-                            [ngModel]="deployGitea()"
+                            [ngModel]="deployGitea()
+                            "
                             (ngModelChange)="onToggleDeployGitea($event)"
                             (click)="$event.stopPropagation()" />
                     <span class="app-icon">🦊</span>
