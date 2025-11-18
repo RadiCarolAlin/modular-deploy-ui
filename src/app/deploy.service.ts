@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../environments/environment';
+import * as signalR from '@microsoft/signalr';
 
 type Step = { id: string; status: string };
 type Platform = {
@@ -39,7 +40,67 @@ export class DeployService {
   private lastPlatformLoad = 0;
   private platformLoadDebounce = 1000;
 
-  constructor(private http: HttpClient) {}
+  // SignalR connection
+  private hubConnection: signalR.HubConnection | null = null;
+
+  constructor(private http: HttpClient) {
+    this.initializeSignalR();
+  }
+
+  private initializeSignalR() {
+    this.hubConnection = new signalR.HubConnectionBuilder()
+        .withUrl(`${environment.orchestratorUrl}/hub/deploy`)
+        .withAutomaticReconnect()
+        .build();
+
+    this.hubConnection.start()
+        .then(() => console.log('✅ SignalR connected'))
+        .catch(err => console.error('❌ SignalR connection error:', err));
+
+    // Listen for real-time updates
+    this.hubConnection.on('ProgressUpdate', (data: any) => {
+      console.log('📡 Real-time update:', data);
+      this.handleProgressUpdate(data);
+    });
+  }
+
+  private handleProgressUpdate(data: { step: string; status: string; log: string; allLogs?: string[] }) {
+    // Update steps
+    const current = this.steps();
+    const stepExists = current.find(s => s.id === data.step);
+
+    let updated: Step[];
+    if (stepExists) {
+      updated = current.map(s =>
+          s.id === data.step ? { ...s, status: data.status } : s
+      );
+    } else {
+      updated = [...current, { id: data.step, status: data.status }];
+    }
+
+    this.steps.set(updated);
+    this.progress.set(this.computePercent(updated, false));
+
+    // ✅ FIX: Folosește TOATE logurile din backend!
+    if (data.allLogs && data.allLogs.length > 0) {
+      const parsedLogs = data.allLogs.map((eventLine: string, idx: number) => {
+        const match = eventLine.match(/^(\d{2}:\d{2}:\d{2})\s+(.+)$/);
+        if (match) {
+          const now = new Date();
+          const [h, m, s] = match[1].split(':').map(Number);
+          const ts = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
+          return { ts: ts.toISOString(), line: match[2] };
+        } else {
+          return {
+            ts: new Date(Date.now() + idx).toISOString(),
+            line: eventLine
+          };
+        }
+      });
+
+      this.logs.set(parsedLogs);  // ⬅️ SETEAZĂ TOATE logurile odată!
+    }
+  }
 
   loadAllPlatforms() {
     this.http.get<Platform[]>(`${environment.orchestratorUrl}/platforms`).subscribe({
@@ -124,7 +185,12 @@ export class DeployService {
         this.opName = res.operation;
         console.log('✅ Deploy started. Operation ID:', res.operation);
         this.status.set(`Platform deployment started. Operation: ${res.operation}`);
-        this.startPolling();
+
+        // Subscribe to SignalR updates for this operation
+        this.subscribeToOperation(res.operation);
+
+        // Start lightweight polling ONLY for "done" check (every 2 seconds)
+        this.startDonePolling();
       },
       error: (err) => {
         console.error('❌ Deploy failed:', err);
@@ -161,7 +227,9 @@ export class DeployService {
         this.opName = res.operation;
         console.log('✅ Add started. Operation ID:', res.operation);
         this.status.set(`Adding apps: ${res.added.join(', ')}. Operation: ${res.operation}`);
-        this.startPolling();
+
+        this.subscribeToOperation(res.operation);
+        this.startDonePolling();
       },
       error: (err) => {
         console.error('❌ Add failed:', err);
@@ -198,7 +266,9 @@ export class DeployService {
         this.opName = res.operation;
         console.log('✅ Remove started. Operation ID:', res.operation);
         this.status.set(`Removing apps: ${res.removed.join(', ')}. Operation: ${res.operation}`);
-        this.startPolling();
+
+        this.subscribeToOperation(res.operation);
+        this.startDonePolling();
       },
       error: (err) => {
         console.error('❌ Remove failed:', err);
@@ -242,7 +312,9 @@ export class DeployService {
         this.opName = res.operation;
         console.log('✅ Delete started. Operation ID:', res.operation);
         this.status.set(`Platform deletion started. Operation: ${res.operation}`);
-        this.startPolling();
+
+        this.subscribeToOperation(res.operation);
+        this.startDonePolling();
       },
       error: (err) => {
         console.error('❌ Delete failed:', err);
@@ -253,82 +325,39 @@ export class DeployService {
     });
   }
 
-  private startPolling() {
-    let pollCount = 0;
-    let completedPollId: number | null = null;
+  private subscribeToOperation(operationId: string) {
+    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
+      this.hubConnection.invoke('SubscribeToOperation', operationId)
+          .then(() => console.log('📡 Subscribed to operation:', operationId))
+          .catch(err => console.error('❌ Subscribe error:', err));
+    }
+  }
+
+  private unsubscribeFromOperation(operationId: string) {
+    if (this.hubConnection?.state === signalR.HubConnectionState.Connected) {
+      this.hubConnection.invoke('UnsubscribeFromOperation', operationId)
+          .then(() => console.log('📡 Unsubscribed from operation:', operationId))
+          .catch(err => console.error('❌ Unsubscribe error:', err));
+    }
+  }
+
+  private startDonePolling() {
+    // Lightweight polling DOAR pentru done flag (la 2 secunde, nu 300ms!)
     this.isStopping = false;
-    this._isCompletelyIdle.set(false);
 
-    const tick = () => {
-      if (this.isStopping) return;
-      if (!this.opName) {
-        console.warn('⚠️ No operation name, stopping poll');
-        return;
-      }
-
-      pollCount++;
-      const thisPollId = pollCount;
+    const checkDone = () => {
+      if (this.isStopping || !this.opName) return;
 
       this.http.get<any>(
           `${environment.orchestratorUrl}/status`,
           { params: { operation: this.opName } }
       ).subscribe({
         next: (res) => {
-          if (completedPollId !== null) return;
-
-          if (pollCount === 1) {
-            console.log('📊 First poll response:', res);
-          }
-
-          const old = this.steps();
-          const map = new Map<string, Step>();
-          for (const s of old) map.set(s.id.toLowerCase(), s);
-
-          if (Array.isArray(res?.steps)) {
-            for (const s of res.steps as Step[]) {
-              const rawId = (s.id ?? '').toLowerCase();
-              if (!rawId) continue;
-              if (!this.isCanonical(rawId)) continue;
-              map.set(rawId, { id: rawId, status: (s.status ?? 'UNKNOWN').toUpperCase() });
-            }
-          }
-
-          const byId = new Map([...map.values()].map(s => [s.id, s]));
-          const final: Step[] = this.canonicalOrder()
-              .map(id => byId.get(id) ?? { id, status: 'RUNNING' })
-              .filter(Boolean) as Step[];
-
-          const doneFlag = !!res?.done;
-          const pct = doneFlag ? 100 : this.computePercent(final, doneFlag);
-
-          const allSuccess = final.length > 0 && final.every(s => (s.status ?? '').toUpperCase() === 'SUCCESS');
-          const stateTxt = doneFlag
-              ? 'SUCCESS (done)'
-              : (allSuccess ? 'Finalizing...' : (res?.state ?? 'WORKING'));
-
-          this.steps.set(final);
-          this.progress.set(pct);
-          this.status.set(stateTxt);
+          // Update logUrl if available
           if (res?.logs) this.logsUrl.set(res.logs);
 
-          if (Array.isArray(res?.events) && res.events.length > 0) {
-            const newLogs = (res.events as string[]).map((eventLine: string, idx: number) => {
-              const match = eventLine.match(/^(\d{2}:\d{2}:\d{2})\s+(.+)$/);
-              if (match) {
-                const now = new Date();
-                const [h, m, s] = match[1].split(':').map(Number);
-                const ts = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, s);
-                return { ts: ts.toISOString(), line: match[2] };
-              } else {
-                const ts = new Date(Date.now() + idx);
-                return { ts: ts.toISOString(), line: eventLine };
-              }
-            });
-            this.logs.set(newLogs);
-          }
-
-          if (doneFlag) {
-            completedPollId = thisPollId;
+          // Check if done
+          if (res?.done) {
             this.isStopping = true;
 
             if (this.pollTimer) {
@@ -336,8 +365,15 @@ export class DeployService {
               this.pollTimer = null;
             }
 
-            console.log('✅ Operation complete after', thisPollId, 'polls');
+            console.log('✅ Operation complete!');
             this.running.set(false);
+            this.progress.set(100);
+            this.status.set('SUCCESS (done)');
+
+            // Unsubscribe from SignalR
+            if (this.opName) {
+              this.unsubscribeFromOperation(this.opName);
+            }
 
             if (this.safetyTimeout) {
               clearTimeout(this.safetyTimeout);
@@ -354,7 +390,7 @@ export class DeployService {
           }
         },
         error: (err) => {
-          console.error('❌ Polling error:', err);
+          console.error('❌ Done polling error:', err);
           this.status.set(`Error polling status: ${err?.error ?? err?.message ?? err}`);
           this._isCompletelyIdle.set(true);
           this.isStopping = true;
@@ -366,9 +402,9 @@ export class DeployService {
       });
     };
 
-    console.log('🔄 Starting polling every 300ms');
-    tick();
-    this.pollTimer = setInterval(tick, 300);
+    console.log('🔄 Starting lightweight done polling every 3 seconds');
+    checkDone();
+    this.pollTimer = setInterval(checkDone, 2000); // Every 2 seconds
   }
 
   private isCanonical(id: string): boolean {
