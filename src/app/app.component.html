@@ -38,7 +38,6 @@
 
         <!-- ========= PLATFORM STATUS CARD (dinamic + fallback) ========= -->
 
-        <!-- dacă avem platforme disponibile în cluster -->
         <ng-container *ngIf="deploy.availablePlatforms().length > 0; else noPlatformsCard">
             <div class="tab-content" *ngIf="platform()">
                 <div class="platform-status">
@@ -70,7 +69,6 @@
                             </div>
                         </div>
 
-                        <!-- status efectiv al platformei curente -->
                         <div class="status-value"
                              [class.active]="platform()!.status === 'active'"
                              [class.deploying]="platform()!.status === 'deploying' || platform()!.status === 'updating'"
@@ -94,7 +92,6 @@
             </div>
         </ng-container>
 
-        <!-- fallback când NU există nicio platformă în cluster -->
         <ng-template #noPlatformsCard>
             <div class="tab-content">
                 <div class="platform-status">

@@ -48,7 +48,6 @@ export class DeployService {
   }
 
   private initializeSignalR() {
-    console.log("albert was here!");
     this.hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${environment.orchestratorUrl}/hub/deploy`, { withCredentials: true })
       .withAutomaticReconnect()
@@ -68,7 +67,7 @@ export class DeployService {
         }));
         this.logs.set(parsedLogs);
         console.log("📡 Logs updated", parsedLogs);
-        //this.handleProgressUpdate(data);
+        this.handleProgressUpdate(data);
       }
     });
   }
@@ -95,7 +94,6 @@ export class DeployService {
     this.steps.set(updated);
     this.progress.set(this.computePercent(updated, false));
 
-    // ✅ FIX: Folosește TOATE logurile din backend!
     if (data.allLogs && data.allLogs.length > 0) {
       const parsedLogs = data.allLogs.map((eventLine: string, idx: number) => {
         const match = eventLine.match(/^(\d{2}:\d{2}:\d{2})\s+(.+)$/);
@@ -119,7 +117,7 @@ export class DeployService {
         }
       });
 
-      this.logs.set(parsedLogs); // ⬅️ SETEAZĂ TOATE logurile odată!
+      this.logs.set(parsedLogs);
     }
   }
 
@@ -447,7 +445,6 @@ export class DeployService {
   }
 
   private startDonePolling() {
-    // Lightweight polling DOAR pentru done flag (la 2 secunde, nu 300ms!)
     this.isStopping = false;
 
     const checkDone = () => {

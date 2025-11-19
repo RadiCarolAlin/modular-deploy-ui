@@ -1,4 +1,3 @@
-# Dockerfile pentru Frontend Angular
 FROM node:20-alpine AS build
 WORKDIR /app
 
